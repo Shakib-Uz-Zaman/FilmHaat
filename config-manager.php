@@ -1156,17 +1156,11 @@ $config = getCurrentConfig();
                 margin-bottom: 20px;
             }
 
-            #logo-preview,
             #background-preview,
             #popup-image-preview {
                 width: 100% !important;
                 max-width: 300px;
                 height: auto !important;
-            }
-
-            #logo-preview {
-                aspect-ratio: 1 / 1;
-                object-fit: cover;
             }
 
             #background-preview {
@@ -1304,7 +1298,6 @@ $config = getCurrentConfig();
                 font-size: 12px;
             }
 
-            #logo-preview,
             #background-preview,
             #popup-image-preview {
                 max-width: 250px;
@@ -1479,7 +1472,7 @@ $config = getCurrentConfig();
     <nav class="navbar">
         <div class="nav-container">
             <div class="logo">
-                <img src="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>" alt="<?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?>" class="logo-image">
+                <img src="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>" alt="" class="logo-image">
                 <span class="logo-text"><?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></span>
             </div>
             <div class="nav-right">
@@ -1905,7 +1898,7 @@ $config = getCurrentConfig();
                 <div style="width: 100%;">
                     <div class="form-group" style="margin-bottom: 25px;">
                         <label class="form-label" style="font-size: 16px; margin-bottom: 10px; display: block;">
-                            Popup Image (2:3 ratio, max 500KB, WebP only):
+                            Popup Image (WebP only):
                         </label>
                         <div class="image-preview-container">
                             <?php if (!empty($POPUP_CONFIG['image_path']) && file_exists($POPUP_CONFIG['image_path'])): ?>
@@ -1924,10 +1917,7 @@ $config = getCurrentConfig();
                                 <div id="popup-image-status" style="margin-top: 10px; font-size: 13px;"></div>
                                 <div style="margin-top: 10px; font-size: 13px; color: #666;">
                                     <strong>Requirements:</strong><br>
-                                    • Aspect ratio: 2:3 (portrait)<br>
-                                    • Format: WebP only<br>
-                                    • Max size: 500KB<br>
-                                    • Example dimensions: 400x600px, 600x900px
+                                    • Format: WebP only
                                 </div>
                             </div>
                         </div>
@@ -1994,6 +1984,20 @@ $config = getCurrentConfig();
                                 <input type="file" id="background-upload" accept=".webp" style="display: none;">
                                 <button type="button" class="add-btn" onclick="document.getElementById('background-upload').click()">Upload Background</button>
                                 <div id="background-status" style="margin-top: 10px; font-size: 13px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 25px;">
+                        <label class="form-label" style="font-size: 16px; margin-bottom: 10px; display: block;">
+                            PWA Logo (1:1 ratio, WebP only):
+                        </label>
+                        <div class="image-preview-container">
+                            <img id="pwa-logo-preview" src="attached_image/pwa-logo.webp" alt="PWA Logo" style="width: 150px; height: 150px; object-fit: cover; border: 2px solid #667eea; border-radius: 8px;">
+                            <div>
+                                <input type="file" id="pwa-logo-upload" accept=".webp" style="display: none;">
+                                <button type="button" class="add-btn" onclick="document.getElementById('pwa-logo-upload').click()">Upload PWA Logo</button>
+                                <div id="pwa-logo-status" style="margin-top: 10px; font-size: 13px;"></div>
                             </div>
                         </div>
                     </div>
@@ -2794,6 +2798,45 @@ $config = getCurrentConfig();
             e.target.value = '';
         });
         
+        document.getElementById('pwa-logo-upload').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const statusDiv = document.getElementById('pwa-logo-status');
+            statusDiv.textContent = 'Uploading...';
+            statusDiv.style.color = '#667eea';
+            
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('image_type', 'pwa_logo');
+            
+            try {
+                const response = await fetch('upload-image-api.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('pwa-logo-preview').src = result.path + '?t=' + Date.now();
+                    statusDiv.textContent = 'PWA Logo uploaded successfully!';
+                    statusDiv.style.color = 'green';
+                    showAlert('PWA Logo uploaded successfully!', 'success');
+                } else {
+                    statusDiv.textContent = result.message;
+                    statusDiv.style.color = 'red';
+                    showAlert(result.message, 'error');
+                }
+            } catch (error) {
+                statusDiv.textContent = 'Upload failed: ' + error.message;
+                statusDiv.style.color = 'red';
+                showAlert('Upload failed', 'error');
+            }
+            
+            e.target.value = '';
+        });
+        
         async function saveSiteSettings() {
             const websiteName = document.querySelector('#site-settings #website-name').value.trim();
             
@@ -2934,81 +2977,52 @@ $config = getCurrentConfig();
                 return;
             }
 
-            if (file.size > 500 * 1024) {
-                statusDiv.textContent = 'Error: File size must be less than 500KB';
-                statusDiv.style.color = '#f44336';
-                e.target.value = '';
-                return;
-            }
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('type', 'popup');
 
-            const img = new Image();
-            img.onload = async function() {
-                const aspectRatio = img.width / img.height;
-                const expectedRatio = 2 / 3;
-                const tolerance = 0.05;
+            try {
+                const response = await fetch('upload-image-api.php', {
+                    method: 'POST',
+                    body: formData
+                });
 
-                if (Math.abs(aspectRatio - expectedRatio) > tolerance) {
-                    statusDiv.textContent = `Error: Image must be 2:3 ratio (portrait). Current: ${img.width}x${img.height}`;
-                    statusDiv.style.color = '#f44336';
-                    e.target.value = '';
-                    return;
-                }
+                const result = await response.json();
 
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('type', 'popup');
-
-                try {
-                    const response = await fetch('upload-image-api.php', {
+                if (result.success) {
+                    statusDiv.textContent = 'Image uploaded successfully! Saving...';
+                    statusDiv.style.color = '#4CAF50';
+                    
+                    const updateResponse = await fetch('config-api.php', {
                         method: 'POST',
-                        body: formData
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            action: 'update_popup_image',
+                            image_path: result.path
+                        })
                     });
 
-                    const result = await response.json();
-
-                    if (result.success) {
-                        statusDiv.textContent = 'Image uploaded successfully! Saving...';
-                        statusDiv.style.color = '#4CAF50';
-                        
-                        const updateResponse = await fetch('config-api.php', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                action: 'update_popup_image',
-                                image_path: result.path
-                            })
-                        });
-
-                        const updateResult = await updateResponse.json();
-                        
-                        if (updateResult.success) {
-                            showAlert('Popup image uploaded successfully!', 'success');
-                            setTimeout(() => location.reload(), 1000);
-                        } else {
-                            statusDiv.textContent = 'Error: ' + updateResult.message;
-                            statusDiv.style.color = '#f44336';
-                        }
+                    const updateResult = await updateResponse.json();
+                    
+                    if (updateResult.success) {
+                        showAlert('Popup image uploaded successfully!', 'success');
+                        setTimeout(() => location.reload(), 1000);
                     } else {
-                        statusDiv.textContent = 'Error: ' + result.message;
+                        statusDiv.textContent = 'Error: ' + updateResult.message;
                         statusDiv.style.color = '#f44336';
                     }
-                } catch (error) {
-                    statusDiv.textContent = 'Error uploading image: ' + error.message;
+                } else {
+                    statusDiv.textContent = 'Error: ' + result.message;
                     statusDiv.style.color = '#f44336';
                 }
-
-                e.target.value = '';
-            };
-
-            img.onerror = function() {
-                statusDiv.textContent = 'Error: Invalid image file';
+            } catch (error) {
+                statusDiv.textContent = 'Error uploading image: ' + error.message;
                 statusDiv.style.color = '#f44336';
-                e.target.value = '';
-            };
+            }
 
-            img.src = URL.createObjectURL(file);
+            e.target.value = '';
         });
 
         async function searchMoviesForHero() {

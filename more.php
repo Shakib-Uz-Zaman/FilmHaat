@@ -30,6 +30,7 @@ $categoryLower = strtolower($category);
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
     <script>
         window.SITE_SETTINGS = {
             website_name: <?php echo json_encode($SITE_SETTINGS['website_name']); ?>,
@@ -101,7 +102,6 @@ $categoryLower = strtolower($category);
             max-width: 1920px;
             margin: 0 auto;
             padding: 40px 20px;
-            padding-bottom: calc(80px + env(safe-area-inset-bottom));
         }
         
         .category-page-grid {
@@ -219,7 +219,6 @@ $categoryLower = strtolower($category);
             
             .category-page-content {
                 padding: 30px 15px;
-                padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
             }
             
             .category-nav-title {
@@ -248,7 +247,6 @@ $categoryLower = strtolower($category);
             
             .category-page-content {
                 padding: 25px 15px;
-                padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
             }
             
             .category-nav-title {
@@ -303,7 +301,7 @@ $categoryLower = strtolower($category);
             <div class="search-popup-header">
                 <div class="search-popup-header-container">
                     <div class="logo">
-                        <img src="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>" alt="<?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?>" class="logo-image">
+                        <img src="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>" alt="" class="logo-image">
                         <span class="logo-text"><?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></span>
                     </div>
                     <button class="search-popup-close" id="searchPopupClose">
@@ -1102,5 +1100,18 @@ $categoryLower = strtolower($category);
         });
     </script>
     <script src="script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('Service Worker registered successfully:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>

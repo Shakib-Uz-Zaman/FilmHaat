@@ -11,20 +11,169 @@ require_once 'config.php';
     <link rel="icon" type="image/webp" href="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>">
     <link rel="apple-touch-icon" href="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>">
     <title>About - <?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></title>
-    <link rel="dns-prefetch" href="https://cdn-uicons.flaticon.com">
-    <link rel="preconnect" href="https://cdn-uicons.flaticon.com" crossorigin>
-    <link rel="preload" as="font" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-solid-straight/webfonts/uicons-solid-straight.woff2" type="font/woff2" crossorigin>
-    <link rel="preload" as="font" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-straight/webfonts/uicons-regular-straight.woff2" type="font/woff2" crossorigin>
-    <link rel="preload" as="font" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-rounded/webfonts/uicons-regular-rounded.woff2" type="font/woff2" crossorigin>
-    <link rel="preload" as="font" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-solid-rounded/webfonts/uicons-solid-rounded.woff2" type="font/woff2" crossorigin>
-    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.6.0/uicons-solid-straight/css/uicons-solid-straight.css'>
-    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-straight/css/uicons-regular-straight.css'>
-    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-rounded/css/uicons-regular-rounded.css'>
-    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.6.0/uicons-solid-rounded/css/uicons-solid-rounded.css'>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Critical CSS for Bottom Navigation - Loaded before page content -->
+    <style>
+        .bottom-nav {
+            position: fixed !important;
+            bottom: 10px !important;
+            left: 50% !important;
+            transform: translateX(-50%) translateZ(0) !important;
+            -webkit-transform: translateX(-50%) translateZ(0) !important;
+            width: calc(100% - 30px) !important;
+            max-width: calc(100% - 20px) !important;
+            background: rgba(20, 20, 20, 0.75);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-around;
+            align-items: stretch;
+            padding: 7px 11px;
+            z-index: 99999 !important;
+            margin: 0 !important;
+            border-radius: 50px;
+            box-shadow: none;
+        }
+
+        .bottom-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
+            padding: 5px 8px;
+            color: rgba(255, 255, 255, 0.6);
+            text-decoration: none;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: flex-direction 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                        gap 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                        padding 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                        background 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                        color 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            position: relative;
+            flex: 1;
+            font-family: inherit;
+            border-radius: 50px;
+            height: 41px;
+            min-height: 41px;
+            max-height: 41px;
+            will-change: flex-direction, gap, padding;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .bottom-nav-item svg,
+        .bottom-nav-item i {
+            width: 28px;
+            height: 28px;
+            font-size: 28px;
+            stroke-width: 2;
+            transform: scale(1);
+            transform-origin: center;
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                        color 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            will-change: transform;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+
+        .bottom-nav-item span {
+            font-size: 0.6rem;
+            font-weight: 500;
+            transform: scale(1);
+            transform-origin: center;
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                        font-weight 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            display: inline-block;
+            text-align: center;
+            line-height: 1;
+            will-change: transform;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            letter-spacing: -0.005em;
+        }
+
+        .bottom-nav-item.active {
+            flex-direction: row;
+            gap: 12px;
+            padding: 9px 22px;
+            background: linear-gradient(90deg, #df0033 0%, #bd284b 100%);
+            color: white;
+            position: relative;
+            flex: 1.3;
+            justify-content: center;
+        }
+
+        .bottom-nav-item.active svg,
+        .bottom-nav-item.active i {
+            transform: scale(0.85) translateX(-4px);
+        }
+
+        .bottom-nav-item.active span {
+            transform: scale(1.5);
+            font-weight: 700;
+        }
+
+        .bottom-nav-item.active svg {
+            fill: white;
+        }
+
+        .bottom-nav-item.active i {
+            color: white;
+            background: transparent;
+            -webkit-background-clip: unset;
+            -webkit-text-fill-color: white;
+            background-clip: unset;
+        }
+
+        .bottom-nav-item.active svg.gradient-fallback {
+            fill: white;
+        }
+
+        .bottom-nav-item.active .bottom-nav-logo-rect {
+            fill: white;
+        }
+
+        .bottom-nav-item:not(.active) .bottom-nav-logo-rect {
+            fill: rgba(255, 255, 255, 0.6);
+        }
+
+        .bottom-nav.hidden {
+            display: none !important;
+        }
+
+        @media (min-width: 769px) {
+            .bottom-nav {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) and (orientation: landscape) {
+            .bottom-nav {
+                display: none !important;
+            }
+        }
+    </style>
+    
+    <!-- SVG Gradient for Bottom Navigation -->
+    <svg width="0" height="0" style="position: absolute;">
+        <defs>
+            <linearGradient id="bottomNavGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#df0033;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#bd284b;stop-opacity:1" />
+            </linearGradient>
+        </defs>
+    </svg>
+    
     <script>
         window.SITE_SETTINGS = {
             website_name: <?php echo json_encode($SITE_SETTINGS['website_name']); ?>,
@@ -396,6 +545,34 @@ require_once 'config.php';
     </style>
 </head>
 <body>
+    <!-- Bottom Navigation - Loaded at the start for instant rendering -->
+    <nav class="bottom-nav">
+        <a href="index.php" class="bottom-nav-item" data-page="home">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="currentColor">
+                <path d="M39.5,43h-9c-1.381,0-2.5-1.119-2.5-2.5v-9c0-1.105-0.895-2-2-2h-4c-1.105,0-2,0.895-2,2v9c0,1.381-1.119,2.5-2.5,2.5h-9   C7.119,43,6,41.881,6,40.5V21.413c0-2.299,1.054-4.471,2.859-5.893L23.071,4.321c0.545-0.428,1.313-0.428,1.857,0L39.142,15.52      C40.947,16.942,42,19.113,42,21.411V40.5C42,41.881,40.881,43,39.5,43z"></path>
+            </svg>
+            <span>Home</span>
+        </a>
+        <a href="latest.php?category=LATEST" class="bottom-nav-item" data-page="latest">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="currentColor">
+                <path d="M45,13c0,0-2,8-7,8c-11,0-7-18-7-18S21,9,18,25c-4-2-5-8-5-8s-6,7-6,18c0,21,20,23,20,23s-5-6-5-13c0-11,4.696-16,4.696-16 s1,11,7.304,11c4,0,6-3,6-3s4,4,4,11c0,6.348-5,10-5,10c10.478-2.106,18-11.79,18-22.862C57,22,45,13,45,13z"></path>
+            </svg>
+            <span><?php echo htmlspecialchars(isset($LATEST_WEBSITES['LATEST']['display_name']) ? $LATEST_WEBSITES['LATEST']['display_name'] : 'Latest'); ?></span>
+        </a>
+        <a href="loved.php" class="bottom-nav-item" data-page="loved">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="currentColor">
+                <path d="M 15 7 C 8.9424416 7 4 11.942442 4 18 C 4 22.096154 7.0876448 25.952899 10.851562 29.908203 C 14.615481 33.863507 19.248379 37.869472 22.939453 41.560547 A 1.50015 1.50015 0 0 0 25.060547 41.560547 C 28.751621 37.869472 33.384518 33.863507 37.148438 29.908203 C 40.912356 25.952899 44 22.096154 44 18 C 44 11.942442 39.057558 7 33 7 C 29.523564 7 26.496821 8.8664883 24 12.037109 C 21.503179 8.8664883 18.476436 7 15 7 z"></path>
+            </svg>
+            <span>Loved</span>
+        </a>
+        <a href="about.php" class="bottom-nav-item active" data-page="about">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" fill="currentColor">
+                <path d="M25,2C12.297,2,2,12.297,2,25s10.297,23,23,23s23-10.297,23-23S37.703,2,25,2z M25,11c1.657,0,3,1.343,3,3s-1.343,3-3,3 s-3-1.343-3-3S23.343,11,25,11z M29,38h-2h-4h-2v-2h2V23h-2v-2h2h4v2v13h2V38z"></path>
+            </svg>
+            <span>About</span>
+        </a>
+    </nav>
+    
     <div class="category-page-header" id="categoryPageHeader">
         <div class="category-header-nav" id="categoryHeaderNav">
             <button onclick="history.back()" class="back-button">
@@ -420,7 +597,7 @@ require_once 'config.php';
             <div class="search-popup-header">
                 <div class="search-popup-header-container">
                     <div class="logo">
-                        <img src="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>" alt="<?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?>" class="logo-image">
+                        <img src="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>" alt="" class="logo-image">
                         <span class="logo-text"><?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></span>
                     </div>
                     <button class="search-popup-close" id="searchPopupClose">
@@ -787,34 +964,19 @@ require_once 'config.php';
         </div>
     </section>
 
-    <svg width="0" height="0" style="position: absolute;">
-        <defs>
-            <linearGradient id="bottomNavGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" style="stop-color:#df0033;stop-opacity:1" />
-                <stop offset="100%" style="stop-color:#bd284b;stop-opacity:1" />
-            </linearGradient>
-        </defs>
-    </svg>
-
-    <nav class="bottom-nav">
-        <a href="index.php" class="bottom-nav-item" data-page="home">
-            <i class="fi fi-rs-house-crack"></i>
-            <span>Home</span>
-        </a>
-        <a href="latest.php?category=LATEST" class="bottom-nav-item" data-page="latest">
-            <i class="fi fi-rs-flame"></i>
-            <span><?php echo htmlspecialchars(isset($LATEST_WEBSITES['LATEST']['display_name']) ? $LATEST_WEBSITES['LATEST']['display_name'] : 'Latest'); ?></span>
-        </a>
-        <a href="loved.php" class="bottom-nav-item" data-page="loved">
-            <i class="fi fi-rs-heart"></i>
-            <span>Loved</span>
-        </a>
-        <a href="about.php" class="bottom-nav-item active" data-page="about">
-            <i class="fi fi-sr-info"></i>
-            <span>About</span>
-        </a>
-    </nav>
-
     <script src="script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('Service Worker registered successfully:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>

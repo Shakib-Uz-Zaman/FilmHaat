@@ -67,26 +67,22 @@ if ($imageType === 'logo') {
     
     $targetFile = 'attached_image/background-image.webp';
 } elseif ($imageType === 'popup') {
-    $aspectRatio = $width / $height;
-    $expectedRatio = 2 / 3;
-    $tolerance = 0.05;
-    
-    if (abs($aspectRatio - $expectedRatio) > $tolerance) {
-        echo json_encode(['success' => false, 'message' => 'Popup image must be 2:3 aspect ratio (portrait)']);
-        exit;
-    }
-    
-    $maxSize = 500 * 1024;
-    if ($fileSize > $maxSize) {
-        echo json_encode(['success' => false, 'message' => 'Popup file size must be less than 500KB']);
-        exit;
-    }
-    
     if (!is_dir('attached_image/popup')) {
         mkdir('attached_image/popup', 0755, true);
     }
     
     $targetFile = 'attached_image/popup/popup-image.webp';
+} elseif ($imageType === 'pwa_logo') {
+    $aspectRatio = $width / $height;
+    $expectedRatio = 1 / 1;
+    $tolerance = 0.01;
+    
+    if (abs($aspectRatio - $expectedRatio) > $tolerance) {
+        echo json_encode(['success' => false, 'message' => 'PWA Logo must be 1:1 aspect ratio']);
+        exit;
+    }
+    
+    $targetFile = 'attached_image/pwa-logo.webp';
 } else {
     echo json_encode(['success' => false, 'message' => 'Invalid image type']);
     exit;
