@@ -1,10 +1,10 @@
 // Navigation Icon Switcher - Active/Inactive States
 (function() {
     const iconMapping = {
-        'home': { inactive: 'fi-rs-house-crack', active: 'fi-ss-house-crack' },
-        'latest': { inactive: 'fi-rs-flame', active: 'fi-ss-flame' },
-        'loved': { inactive: 'fi-rs-heart', active: 'fi-ss-heart' },
-        'about': { inactive: 'fi-rr-info', active: 'fi-sr-info' }
+        'home': 'fi-ss-house-crack',
+        'latest': 'fi-ss-flame',
+        'loved': 'fi-ss-heart',
+        'about': 'fi-sr-info'
     };
 
     function updateNavigationIcons() {
@@ -15,10 +15,7 @@
             const icon = item.querySelector('i');
             
             if (icon && iconMapping[page]) {
-                const isActive = item.classList.contains('active');
-                const iconClass = isActive ? iconMapping[page].active : iconMapping[page].inactive;
-                
-                icon.className = 'fi ' + iconClass;
+                icon.className = 'fi ' + iconMapping[page];
             }
         });
     }
@@ -32,6 +29,9 @@
 
 // Weekly Top 10 Tracking System (Last 7 Days) - Server-side with all users data
 const API_WEEKLY_TOP10 = 'api-weekly-top10.php';
+
+// Track if Weekly Top 10 has movies
+let hasWeeklyTop10Movies = false;
 
 async function trackMovieView(title, link, image, language) {
     if (!title || !link) {
@@ -149,8 +149,8 @@ function getRelativeTime(timestamp) {
     }
 }
 
-let currentThemeColor = '#141414';
-let targetThemeColor = '#141414';
+let currentThemeColor = '#000000';
+let targetThemeColor = '#000000';
 let isTransitioning = false;
 
 function handleScroll() {
@@ -2606,11 +2606,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Track movie view for Weekly Top 10
         trackMovieView(title, link, image, language);
         
-        // Check if clicked from Recent Viewed section to skip UI reload
-        const isFromRecentViewed = item.classList.contains('recent-viewed-item');
-        
-        // Save to recent viewed movies
-        saveToRecentViewed(title, link, image, language, genre, website, isFromRecentViewed);
+        // Save to recent viewed movies (skip UI reload, will show after page refresh)
+        saveToRecentViewed(title, link, image, language, genre, website, true);
         
         modalTitle.textContent = title;
         modalLink.href = link;
@@ -3228,6 +3225,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (!weeklyTop10Carousel || !weeklyTop10Section) return;
         
+        // Update global tracker
+        hasWeeklyTop10Movies = movies.length > 0;
+        
         if (movies.length === 0) {
             weeklyTop10Section.style.display = 'none';
             return;
@@ -3424,7 +3424,18 @@ document.addEventListener('DOMContentLoaded', function() {
         if (category === 'all') {
             defaultSections.forEach(sectionId => {
                 const section = document.getElementById(sectionId);
-                if (section) section.style.display = 'block';
+                if (section) {
+                    // Special handling for Weekly Top 10 - only show if it has movies
+                    if (sectionId === 'weekly_top_10Section') {
+                        if (hasWeeklyTop10Movies) {
+                            section.style.display = 'block';
+                        } else {
+                            section.style.display = 'none';
+                        }
+                    } else {
+                        section.style.display = 'block';
+                    }
+                }
             });
             
             if (window.CATEGORIES_CONFIG) {
@@ -3784,3 +3795,126 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
 });
+
+(function() {
+    
+    let deferredPrompt = null;
+    let bannerDismissedThisSession = false;
+    const pwaInstallBanner = document.getElementById('pwaInstallBanner');
+    const pwaInstallBtn = document.getElementById('pwaInstallBtn');
+    const pwaCloseBtn = document.getElementById('pwaCloseBtn');
+    
+    if (!pwaInstallBanner || !pwaInstallBtn || !pwaCloseBtn) {
+        return;
+    }
+    
+    const PWA_BANNER_INSTALLED_KEY = 'pwa_installed';
+    const PWA_PROMPT_AVAILABLE_KEY = 'pwa_prompt_available';
+    
+    function isPWAInstalled() {
+        const installed = localStorage.getItem(PWA_BANNER_INSTALLED_KEY) === 'true' ||
+               window.matchMedia('(display-mode: standalone)').matches || 
+               window.navigator.standalone === true;
+        return installed;
+    }
+    
+    function isIOS() {
+        const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        return ios;
+    }
+    
+    function isSafari() {
+        const safari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        return safari;
+    }
+    
+    function showBanner(isFallback = false) {
+        
+        if (isPWAInstalled() || bannerDismissedThisSession) {
+            return;
+        }
+        
+        setTimeout(() => {
+            pwaInstallBanner.style.display = 'block';
+            setTimeout(() => {
+                pwaInstallBanner.classList.add('show');
+            }, 10);
+        }, 3000);
+    }
+    
+    function hideBanner() {
+        pwaInstallBanner.classList.remove('show');
+        setTimeout(() => {
+            pwaInstallBanner.style.display = 'none';
+        }, 300);
+    }
+    
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        localStorage.setItem(PWA_PROMPT_AVAILABLE_KEY, 'true');
+        
+        if (window.pwaDebugInfo) {
+            window.pwaDebugInfo.beforeInstallPromptFired = true;
+        }
+        
+        showBanner(false);
+    });
+    
+    pwaInstallBtn.addEventListener('click', async () => {
+        
+        if (!deferredPrompt) {
+            return;
+        }
+        
+        deferredPrompt.prompt();
+        
+        const { outcome } = await deferredPrompt.userChoice;
+        
+        if (outcome === 'accepted') {
+            localStorage.setItem(PWA_BANNER_INSTALLED_KEY, 'true');
+            hideBanner();
+        } else {
+        }
+        
+        deferredPrompt = null;
+    });
+    
+    pwaCloseBtn.addEventListener('click', () => {
+        hideBanner();
+        bannerDismissedThisSession = true;
+    });
+    
+    window.addEventListener('appinstalled', () => {
+        localStorage.setItem(PWA_BANNER_INSTALLED_KEY, 'true');
+        hideBanner();
+    });
+    
+    if (isPWAInstalled()) {
+        hideBanner();
+    }
+    
+    setTimeout(() => {
+        const promptWasAvailable = localStorage.getItem(PWA_PROMPT_AVAILABLE_KEY) === 'true';
+        
+        if (!deferredPrompt && !promptWasAvailable && (isIOS() || isSafari())) {
+            if (!isPWAInstalled() && !bannerDismissedThisSession) {
+                const bannerSubtitle = pwaInstallBanner.querySelector('.pwa-banner-subtitle');
+                const installBtn = pwaInstallBtn;
+                
+                if (bannerSubtitle) {
+                    bannerSubtitle.textContent = 'Tap Share → Add to Home Screen';
+                }
+                
+                if (installBtn) {
+                    installBtn.style.display = 'none';
+                }
+                
+                showBanner(true);
+            }
+        } else {
+            if (!deferredPrompt && !promptWasAvailable && !isIOS() && !isSafari()) {
+            }
+        }
+    }, 5000);
+})();
