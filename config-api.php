@@ -1,23 +1,6 @@
 <?php
 header('Content-Type: application/json');
 
-// Allow public access only for get_popup_config
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $action = $_GET['action'] ?? '';
-    
-    if ($action === 'get_popup_config') {
-        require_once 'config.php';
-        echo json_encode([
-            'success' => true,
-            'config' => $POPUP_CONFIG
-        ]);
-        exit;
-    }
-    
-    echo json_encode(['success' => false, 'message' => 'Invalid GET action']);
-    exit;
-}
-
 // Protect all POST requests - Only authenticated admins can modify config
 require_once 'auth-check.php';
 
@@ -45,8 +28,7 @@ $config = [
     'SEARCH_WEBSITES' => $SEARCH_WEBSITES,
     'HERO_CAROUSEL_WEBSITES' => $HERO_CAROUSEL_WEBSITES,
     'HERO_CAROUSEL_MANUAL_MOVIES' => $HERO_CAROUSEL_MANUAL_MOVIES,
-    'SITE_SETTINGS' => $SITE_SETTINGS,
-    'POPUP_CONFIG' => $POPUP_CONFIG
+    'SITE_SETTINGS' => $SITE_SETTINGS
 ];
 
 function escapePhpString($str) {
@@ -110,7 +92,6 @@ function saveConfigToFile($config) {
     $content .= "\$HERO_CAROUSEL_WEBSITES = " . arrayToPhpCode($config['HERO_CAROUSEL_WEBSITES']) . ";\n\n";
     $content .= "\$HERO_CAROUSEL_MANUAL_MOVIES = " . arrayToPhpCode($config['HERO_CAROUSEL_MANUAL_MOVIES']) . ";\n\n";
     $content .= "\$SITE_SETTINGS = " . arrayToPhpCode($config['SITE_SETTINGS']) . ";\n\n";
-    $content .= "\$POPUP_CONFIG = " . arrayToPhpCode($config['POPUP_CONFIG']) . ";\n\n";
     $content .= "?>\n";
     
     $result = file_put_contents('config.php', $content);
@@ -583,58 +564,6 @@ try {
             throw new Exception('Failed to save config file');
         }
         
-    } elseif ($action === 'update_popup_config') {
-        $enabled = isset($input['enabled']) ? (bool)$input['enabled'] : false;
-        $targetUrl = $input['target_url'] ?? '';
-        $showDelay = isset($input['show_delay']) ? (int)$input['show_delay'] : 500;
-        $countdownDuration = isset($input['countdown_duration']) ? (int)$input['countdown_duration'] : 10;
-        
-        $config['POPUP_CONFIG']['enabled'] = $enabled;
-        $config['POPUP_CONFIG']['target_url'] = $targetUrl;
-        $config['POPUP_CONFIG']['show_delay'] = $showDelay;
-        $config['POPUP_CONFIG']['countdown_duration'] = $countdownDuration;
-        
-        if (saveConfigToFile($config)) {
-            echo json_encode(['success' => true, 'message' => 'Popup settings updated successfully']);
-        } else {
-            throw new Exception('Failed to save config file');
-        }
-        
-    } elseif ($action === 'update_popup_image') {
-        $imagePath = $input['image_path'] ?? '';
-        
-        if (empty($imagePath)) {
-            throw new Exception('Image path is required');
-        }
-        
-        if (!file_exists($imagePath)) {
-            throw new Exception('Image file does not exist');
-        }
-        
-        $config['POPUP_CONFIG']['image_path'] = $imagePath;
-        
-        if (saveConfigToFile($config)) {
-            echo json_encode(['success' => true, 'message' => 'Popup image updated successfully']);
-        } else {
-            throw new Exception('Failed to save config file');
-        }
-        
-    } elseif ($action === 'delete_popup_image') {
-        $currentImagePath = $config['POPUP_CONFIG']['image_path'] ?? '';
-        
-        if (!empty($currentImagePath) && file_exists($currentImagePath)) {
-            unlink($currentImagePath);
-        }
-        
-        $config['POPUP_CONFIG']['image_path'] = '';
-        $config['POPUP_CONFIG']['enabled'] = false;
-        
-        if (saveConfigToFile($config)) {
-            echo json_encode(['success' => true, 'message' => 'Popup image deleted successfully']);
-        } else {
-            throw new Exception('Failed to save config file');
-        }
-        
     } elseif ($action === 'add_hero_manual_movie') {
         $movie = $input['movie'] ?? null;
         
@@ -708,23 +637,6 @@ try {
             echo json_encode([
                 'success' => true, 
                 'message' => 'All manual movies are now ' . $statusText,
-                'hidden' => $newHiddenState
-            ]);
-        } else {
-            throw new Exception('Failed to save config file');
-        }
-        
-    } elseif ($action === 'toggle_popup_visibility') {
-        $currentHidden = isset($config['POPUP_CONFIG']['hidden']) && $config['POPUP_CONFIG']['hidden'];
-        $newHiddenState = !$currentHidden;
-        
-        $config['POPUP_CONFIG']['hidden'] = $newHiddenState;
-        
-        if (saveConfigToFile($config)) {
-            $statusText = $newHiddenState ? 'hidden' : 'visible';
-            echo json_encode([
-                'success' => true, 
-                'message' => 'Popup is now ' . $statusText,
                 'hidden' => $newHiddenState
             ]);
         } else {

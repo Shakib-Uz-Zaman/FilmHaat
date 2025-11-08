@@ -711,7 +711,6 @@
         ?>;
     </script>
     <script src="script.js?v=<?php echo time(); ?>"></script>
-    <script src="popup-manager.js?v=<?php echo time(); ?>"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

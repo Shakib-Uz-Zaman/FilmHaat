@@ -225,13 +225,4 @@ $SITE_SETTINGS = [
     'background_image' => 'attached_image/background-image.webp',
 ];
 
-$POPUP_CONFIG = [
-    'enabled' => true,
-    'image_path' => 'attached_image/popup/popup-image.webp',
-    'target_url' => 'https://youtube.com/@sb-tunes-update?si=0mzIOnoJNHV49SVW',
-    'show_delay' => 500,
-    'countdown_duration' => 5,
-    'hidden' => true,
-];
-
 ?>

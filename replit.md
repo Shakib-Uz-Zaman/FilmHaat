@@ -26,7 +26,6 @@ The application uses a vanilla PHP backend and vanilla JavaScript/CSS frontend.
 - **Modal Metadata Display**: Movie modals display Language, Genre, and IMDb Rating above the title with styled badges.
 - **Weekly Top 10**: Dedicated section for most-viewed movies/series with Netflix-style large numbering, using localStorage for client-side tracking.
 - **Responsive Navigation System**: Fixed bottom navigation bar for mobile with gradient accents and blur; header navigation for desktop with hover effects and active states.
-- **Promotional Popup System**: Page-load promotional popup displaying a clickable image (WebP format) with a gradient-styled close button, managed via `config-manager.php`.
 
 ### Technical Implementations
 - **Backend**: Pure PHP 8.4, utilizing cURL for HTTP requests.
@@ -40,7 +39,6 @@ The application uses a vanilla PHP backend and vanilla JavaScript/CSS frontend.
 - **Movie Deduplication**: Centralized `deduplicated-sections.php` ensures unique movies across sections.
 - **Staged Loading Strategy**: Three-stage loading process (Priority sequential, Secondary parallel, Category lazy-loaded) for optimized page load.
 - **Weekly Top 10 Tracking**: Server-side view tracking using `data/weekly_views.json` and `api-weekly-top10.php` with file locking and 7-day data cleanup.
-- **Promotional Popup System**: Configured via `$POPUP_CONFIG` in `config.php`, fetched by `popup-manager.js`, with image validation (WebP format only) and session-based tracking.
 - **Hero Illustration Fallback**: When hero carousel data is unavailable or all sources are hidden, displays an animated movie-themed vector illustration with welcome text, maintaining visual consistency and preventing blank hero sections.
 - **Universal Smart Navigation System**: Comprehensive SessionStorage-based navigation stack system that mimics browser back/forward behavior across all navigation elements throughout the application. When users click on previously-visited pages via any navigation link (desktop header nav, mobile bottom nav, or "More" buttons), the system uses `history.go()` to restore pages from browser cache (bfcache) instead of reloading. This preserves scroll positions, loaded content, and complete page state. The navigation stack tracks all visited pages and intelligently routes between them, providing instant page transitions and a native app-like experience across the entire site.
 - **Dynamic Favicon System**: All pages dynamically use the site logo as the browser favicon and Apple touch icon. The favicon automatically updates when the logo is changed through the config manager, ensuring brand consistency across all pages (index.php, about.php, latest.php, loved.php, more.php, config-manager.php, and login.php).

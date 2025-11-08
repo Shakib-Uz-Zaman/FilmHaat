@@ -5,7 +5,6 @@ const DYNAMIC_CACHE = 'filmhaat-dynamic-v1';
 const STATIC_ASSETS = [
   '/styles.css',
   '/script.js',
-  '/popup-manager.js',
   '/manifest.php',
   '/offline.html',
   '/icons/icon-192x192.webp',

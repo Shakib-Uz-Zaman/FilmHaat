@@ -9,7 +9,7 @@ header('Expires: 0');
 require_once 'config.php';
 
 function getCurrentConfig() {
-    global $ALL_SECTION_WEBSITES, $CATEGORIES_WEBSITES, $LATEST_WEBSITES, $SEARCH_WEBSITES, $HERO_CAROUSEL_WEBSITES, $HERO_CAROUSEL_MANUAL_MOVIES, $SITE_SETTINGS, $POPUP_CONFIG;
+    global $ALL_SECTION_WEBSITES, $CATEGORIES_WEBSITES, $LATEST_WEBSITES, $SEARCH_WEBSITES, $HERO_CAROUSEL_WEBSITES, $HERO_CAROUSEL_MANUAL_MOVIES, $SITE_SETTINGS;
     return [
         'ALL_SECTION_WEBSITES' => $ALL_SECTION_WEBSITES,
         'CATEGORIES_WEBSITES' => $CATEGORIES_WEBSITES,
@@ -17,8 +17,7 @@ function getCurrentConfig() {
         'SEARCH_WEBSITES' => $SEARCH_WEBSITES,
         'HERO_CAROUSEL_WEBSITES' => $HERO_CAROUSEL_WEBSITES,
         'HERO_CAROUSEL_MANUAL_MOVIES' => $HERO_CAROUSEL_MANUAL_MOVIES,
-        'SITE_SETTINGS' => $SITE_SETTINGS,
-        'POPUP_CONFIG' => $POPUP_CONFIG
+        'SITE_SETTINGS' => $SITE_SETTINGS
     ];
 }
 
@@ -696,18 +695,6 @@ $config = getCurrentConfig();
             opacity: 0.5;
         }
 
-        .popup-content-wrapper.hidden > div {
-            opacity: 0.35;
-        }
-
-        .popup-content-wrapper.hidden:hover > div {
-            opacity: 0.5;
-        }
-
-        #toggle-popup-btn {
-            opacity: 1 !important;
-        }
-
         .website-info {
             flex: 1;
             min-width: 0;
@@ -1016,7 +1003,6 @@ $config = getCurrentConfig();
             }
 
             .section-header .hide-btn,
-            #toggle-popup-btn,
             #toggle-manual-movies-btn {
                 width: 100%;
                 padding: 10px 18px;
@@ -1146,37 +1132,20 @@ $config = getCurrentConfig();
                 align-self: flex-start;
             }
 
-            #popup-manager .website-item,
             #site-settings .website-item {
                 padding: 16px;
             }
 
-            #popup-manager .form-group,
             #site-settings .form-group {
                 margin-bottom: 20px;
             }
 
-            #background-preview,
-            #popup-image-preview {
+            #background-preview {
                 width: 100% !important;
                 max-width: 300px;
                 height: auto !important;
-            }
-
-            #background-preview {
                 aspect-ratio: 16 / 9;
                 object-fit: cover;
-            }
-
-            #popup-image-preview {
-                aspect-ratio: 2 / 3;
-                object-fit: cover;
-            }
-
-            #popup-image-preview-wrapper {
-                width: 100% !important;
-                max-width: 200px;
-                aspect-ratio: 2 / 3;
             }
         }
 
@@ -1298,8 +1267,7 @@ $config = getCurrentConfig();
                 font-size: 12px;
             }
 
-            #background-preview,
-            #popup-image-preview {
+            #background-preview {
                 max-width: 250px;
             }
         }
@@ -1507,7 +1475,6 @@ $config = getCurrentConfig();
                     <button class="tab" onclick="showTab('latest')">Latest Websites</button>
                     <button class="tab" onclick="showTab('search')">Search Websites</button>
                     <button class="tab" onclick="showTab('hero')">Hero Carousel</button>
-                    <button class="tab" onclick="showTab('popup-manager')">Popup Manager</button>
                     <button class="tab" onclick="showTab('site-settings')">Site Settings</button>
                 </div>
                 <button class="carousel-btn right" onclick="scrollTabs('right')">
@@ -1877,73 +1844,6 @@ $config = getCurrentConfig();
                             <?php endif; ?>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="popup-manager" class="tab-content">
-            <div class="section-header">
-                <h2>Popup Manager</h2>
-                <button 
-                    id="toggle-popup-btn"
-                    onclick="togglePopupVisibility()"
-                    class="hide-btn"
-                >
-                    <?php echo (isset($POPUP_CONFIG['hidden']) && $POPUP_CONFIG['hidden']) ? 'Unhide' : 'Hide'; ?>
-                </button>
-            </div>
-            
-            <?php $isPopupHidden = isset($POPUP_CONFIG['hidden']) && $POPUP_CONFIG['hidden']; ?>
-            <div class="website-item popup-content-wrapper <?php echo $isPopupHidden ? 'hidden' : ''; ?>" style="max-width: 900px; margin: 0 auto;">
-                <div style="width: 100%;">
-                    <div class="form-group" style="margin-bottom: 25px;">
-                        <label class="form-label" style="font-size: 16px; margin-bottom: 10px; display: block;">
-                            Popup Image (WebP only):
-                        </label>
-                        <div class="image-preview-container">
-                            <?php if (!empty($POPUP_CONFIG['image_path']) && file_exists($POPUP_CONFIG['image_path'])): ?>
-                                <div style="position: relative;">
-                                    <img id="popup-image-preview" src="<?php echo htmlspecialchars($POPUP_CONFIG['image_path']); ?>?v=<?php echo time(); ?>" alt="Popup" style="width: 200px; height: 300px; object-fit: cover; border: 2px solid #667eea; border-radius: 8px;">
-                                    <button type="button" class="delete-btn" onclick="deletePopupImage()" style="position: absolute; top: -10px; right: -10px; width: 32px; height: 32px; border-radius: 50%; background: #f44336; color: white; border: none; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">×</button>
-                                </div>
-                            <?php else: ?>
-                                <div id="popup-image-preview-wrapper" style="width: 200px; height: 300px; border: 2px dashed #ccc; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999;">
-                                    No Image
-                                </div>
-                            <?php endif; ?>
-                            <div>
-                                <input type="file" id="popup-image-upload" accept=".webp" style="display: none;">
-                                <button type="button" class="add-btn" onclick="document.getElementById('popup-image-upload').click()">Upload Popup Image</button>
-                                <div id="popup-image-status" style="margin-top: 10px; font-size: 13px;"></div>
-                                <div style="margin-top: 10px; font-size: 13px; color: #666;">
-                                    <strong>Requirements:</strong><br>
-                                    • Format: WebP only
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group" style="margin-bottom: 25px;">
-                        <label class="form-label" style="font-size: 16px; margin-bottom: 10px; display: block;">Target URL:</label>
-                        <input type="text" id="popup-target-url" class="form-input" value="<?php echo htmlspecialchars($POPUP_CONFIG['target_url'] ?? ''); ?>" placeholder="https://example.com/page" style="width: 100%; padding: 12px; font-size: 15px;">
-                        <small style="color: #666; display: block; margin-top: 5px;">When users click the popup image, they will be redirected to this URL.</small>
-                    </div>
-                    
-                    <div class="form-group" style="margin-bottom: 25px;">
-                        <label class="form-label" style="font-size: 16px; margin-bottom: 10px; display: block;">Show Delay (milliseconds):</label>
-                        <input type="number" id="popup-delay" class="form-input" value="<?php echo htmlspecialchars($POPUP_CONFIG['show_delay'] ?? 500); ?>" min="0" max="10000" step="100" style="width: 100%; padding: 12px; font-size: 15px;">
-                        <small style="color: #666; display: block; margin-top: 5px;">Delay before showing popup after page load (1000ms = 1 second).</small>
-                    </div>
-                    
-                    <div class="form-group" style="margin-bottom: 25px;">
-                        <label class="form-label" style="font-size: 16px; margin-bottom: 10px; display: block;">Auto Close Timer (seconds):</label>
-                        <input type="number" id="popup-countdown" class="form-input" value="<?php echo htmlspecialchars($POPUP_CONFIG['countdown_duration'] ?? 10); ?>" min="1" max="60" step="1" style="width: 100%; padding: 12px; font-size: 15px;">
-                        <small style="color: #666; display: block; margin-top: 5px;">Popup will automatically close after this many seconds.</small>
-                    </div>
-                    
-                    <button type="button" class="add-btn" onclick="savePopupSettings()" style="width: 100%; padding: 15px; font-size: 16px;">
-                        Save Popup Settings
-                    </button>
                 </div>
             </div>
         </div>
@@ -2899,132 +2799,6 @@ $config = getCurrentConfig();
             }
         }
 
-        async function savePopupSettings() {
-            const enabled = document.getElementById('popup-enabled').checked;
-            const targetUrl = document.getElementById('popup-target-url').value.trim();
-            const delay = parseInt(document.getElementById('popup-delay').value) || 500;
-            const countdown = parseInt(document.getElementById('popup-countdown').value) || 10;
-
-            try {
-                const response = await fetch('config-api.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'update_popup_config',
-                        enabled: enabled,
-                        target_url: targetUrl,
-                        show_delay: delay,
-                        countdown_duration: countdown
-                    })
-                });
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    showAlert('Popup settings saved successfully!', 'success');
-                    setTimeout(() => location.reload(), 1000);
-                } else {
-                    showAlert(result.message, 'error');
-                }
-            } catch (error) {
-                showAlert('Error saving popup settings: ' + error.message, 'error');
-            }
-        }
-
-        async function deletePopupImage() {
-            if (!confirm('Are you sure you want to delete the popup image?')) {
-                return;
-            }
-
-            try {
-                const response = await fetch('config-api.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'delete_popup_image'
-                    })
-                });
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    showAlert('Popup image deleted successfully!', 'success');
-                    setTimeout(() => location.reload(), 1000);
-                } else {
-                    showAlert(result.message, 'error');
-                }
-            } catch (error) {
-                showAlert('Error deleting popup image: ' + error.message, 'error');
-            }
-        }
-
-        document.getElementById('popup-image-upload')?.addEventListener('change', async function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const statusDiv = document.getElementById('popup-image-status');
-            statusDiv.textContent = 'Uploading...';
-            statusDiv.style.color = '#667eea';
-
-            if (!file.name.toLowerCase().endsWith('.webp')) {
-                statusDiv.textContent = 'Error: Only WebP format is allowed';
-                statusDiv.style.color = '#f44336';
-                e.target.value = '';
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('type', 'popup');
-
-            try {
-                const response = await fetch('upload-image-api.php', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    statusDiv.textContent = 'Image uploaded successfully! Saving...';
-                    statusDiv.style.color = '#4CAF50';
-                    
-                    const updateResponse = await fetch('config-api.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            action: 'update_popup_image',
-                            image_path: result.path
-                        })
-                    });
-
-                    const updateResult = await updateResponse.json();
-                    
-                    if (updateResult.success) {
-                        showAlert('Popup image uploaded successfully!', 'success');
-                        setTimeout(() => location.reload(), 1000);
-                    } else {
-                        statusDiv.textContent = 'Error: ' + updateResult.message;
-                        statusDiv.style.color = '#f44336';
-                    }
-                } else {
-                    statusDiv.textContent = 'Error: ' + result.message;
-                    statusDiv.style.color = '#f44336';
-                }
-            } catch (error) {
-                statusDiv.textContent = 'Error uploading image: ' + error.message;
-                statusDiv.style.color = '#f44336';
-            }
-
-            e.target.value = '';
-        });
-
         async function searchMoviesForHero() {
             const searchInput = document.getElementById('hero-movie-search');
             const query = searchInput.value.trim();
@@ -3217,40 +2991,6 @@ $config = getCurrentConfig();
             }
         }
 
-        async function togglePopupVisibility() {
-            const toggleBtn = document.getElementById('toggle-popup-btn');
-            const originalContent = toggleBtn.innerHTML;
-            
-            toggleBtn.disabled = true;
-            toggleBtn.innerHTML = '<span>Processing...</span>';
-            
-            try {
-                const response = await fetch('config-api.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'toggle_popup_visibility'
-                    })
-                });
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    showAlert(result.message, 'success');
-                    setTimeout(() => location.reload(), 1000);
-                } else {
-                    showAlert(result.message || 'Error toggling popup visibility', 'error');
-                    toggleBtn.disabled = false;
-                    toggleBtn.innerHTML = originalContent;
-                }
-            } catch (error) {
-                showAlert('Error toggling popup visibility: ' + error.message, 'error');
-                toggleBtn.disabled = false;
-                toggleBtn.innerHTML = originalContent;
-            }
-        }
     </script>
 </body>
 </html>

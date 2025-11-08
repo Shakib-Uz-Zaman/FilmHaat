@@ -66,12 +66,6 @@ if ($imageType === 'logo') {
     }
     
     $targetFile = 'attached_image/background-image.webp';
-} elseif ($imageType === 'popup') {
-    if (!is_dir('attached_image/popup')) {
-        mkdir('attached_image/popup', 0755, true);
-    }
-    
-    $targetFile = 'attached_image/popup/popup-image.webp';
 } elseif ($imageType === 'pwa_logo') {
     $aspectRatio = $width / $height;
     $expectedRatio = 1 / 1;
