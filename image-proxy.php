@@ -2,6 +2,8 @@
 // Image proxy to bypass CORS restrictions for color extraction
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET');
+header('Cache-Control: public, max-age=86400, stale-while-revalidate=172800');
+header('Vary: Accept-Encoding');
 
 // Get image URL from query parameter
 $imageUrl = isset($_GET['url']) ? $_GET['url'] : '';

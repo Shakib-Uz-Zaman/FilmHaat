@@ -3,6 +3,36 @@
 ## Overview
 FilmHaat is a PHP-based web application designed to aggregate movie search results from multiple websites into a single, user-friendly interface. Its primary purpose is to simplify movie discovery by allowing users to search across various sources simultaneously. The project aims to provide a centralized platform for finding movies, inspired by streaming service UIs, with a fully dynamic section and category system that can be configured without touching code. The business vision is to become a go-to platform for movie enthusiasts seeking a consolidated view of available titles across multiple sources.
 
+## Recent Changes
+- **2025-11-09**: Updated horizontal card layout gradient background for improved visual consistency:
+  - Changed `.category-grid-item` background gradient from `rgba(26,26,26,0)` to `#101010` → now `transparent` to `#1a1a1a`
+  - Applied same gradient to both normal and hover states for consistent appearance
+  - Horizontal cards now feature a subtle top-to-bottom gradient (transparent → #1a1a1a) that enhances visual depth
+- **2025-11-09**: Eliminated Google Fonts to achieve instant font rendering and save 1.8+ seconds on page load:
+  - Replaced Inter font with native system font stack (-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, etc.)
+  - Removed all Google Fonts preconnect links and JavaScript loading from all pages (index, latest, loved, more, about)
+  - Zero network requests for fonts, improving privacy and performance
+  - Expected impact: Instant font rendering with zero latency, professional native look across all devices
+- **2025-11-09**: Backend and frontend performance optimization to eliminate slow-loading resources:
+  - Added server-side file caching to category-posters.php with 10-minute TTL, caching only successful responses to prevent empty poster data persistence
+  - Reduced curl timeouts from 20s→8s (CURLOPT_TIMEOUT) and 5s→3s (CURLOPT_CONNECTTIMEOUT) to fail faster on slow external sources
+  - Added `defer` attribute to script.js across all pages (index, latest, loved, more, about) to prevent render-blocking
+  - Cache directory (`/cache/`) automatically created with proper permissions, already ignored in .gitignore
+  - Expected impact: category-posters.php drops from 4+ seconds to instant on subsequent loads; script.js no longer blocks page rendering
+- **2025-11-09**: Major network performance optimization to reduce critical path latency and improve page load speed:
+  - Added preconnect and DNS prefetch hints for external image domains (catimages.org, image.tmdb.org) to establish early connections and reduce latency
+  - Implemented HTTP caching headers across all API endpoints:
+    - hero-carousel.php: 5-minute cache with 10-minute stale-while-revalidate
+    - category-posters.php: 10-minute cache with 20-minute stale-while-revalidate
+    - deduplicated-sections.php: 5-minute cache with 10-minute stale-while-revalidate
+    - image-proxy.php: 24-hour cache with 48-hour stale-while-revalidate
+  - Optimized JavaScript API calls for parallel execution using Promise.all() instead of sequential await
+  - Enhanced category-posters loading to use cache-aware fetch instead of regular fetch
+  - All optimizations work together to significantly reduce the 3,294ms critical path latency shown in performance audits
+- **2025-11-09**: Eliminated render-blocking resources to improve page load performance by approximately 1.8 seconds. All pages (index.php, latest.php, loved.php, about.php, more.php) now use async loading for Google Fonts (via JavaScript with font-display swap) and styles.css (via preload with onload promotion). Critical CSS remains inline for immediate rendering. Includes noscript fallback for CSS to maintain compatibility with JavaScript-disabled browsers.
+  - **Update**: Reverted styles.css to normal synchronous loading to prevent FOUC (Flash of Unstyled Content). Google Fonts remain async-loaded via JavaScript for optimal performance. This approach eliminates ~750ms of font render-blocking while maintaining proper page styling on initial load.
+- **2025-11-08**: Improved accessibility and SEO by changing category links. Links now display "See All" visually (keeping UI clean since section name is already visible), while using `aria-label="See All [Category Name]"` for screen readers and search engines. This resolves content best practices warnings about links lacking descriptive text while maintaining a clean visual design.
+
 ## User Preferences
 I want to emphasize a few key preferences for how the agent should interact with this project:
 - No changes to `config.php` unless explicitly requested: This file is central to the application's external integrations, and I want to maintain strict control over its contents.

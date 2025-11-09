@@ -1,3 +1,30 @@
+// Cache-aware fetch helper - checks cache first to skip skeleton loading
+async function fetchWithCacheCheck(url) {
+    try {
+        if ('caches' in window) {
+            const cache = await caches.open('filmhaat-dynamic-v1');
+            const cachedResponse = await cache.match(url);
+            
+            if (cachedResponse) {
+                const cachedData = await cachedResponse.json();
+                return {
+                    data: cachedData,
+                    fromCache: true
+                };
+            }
+        }
+    } catch (error) {
+        console.warn('Cache check failed:', error);
+    }
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    return {
+        data: data,
+        fromCache: false
+    };
+}
+
 // Navigation Icon Switcher - Active/Inactive States
 (function() {
     const iconMapping = {
@@ -24,6 +51,116 @@
         document.addEventListener('DOMContentLoaded', updateNavigationIcons);
     } else {
         updateNavigationIcons();
+    }
+})();
+
+// Dynamic Title Tag System
+(function() {
+    // Get website name from config (fallback to 'FilmHaat' if not set)
+    const websiteName = window.WEBSITE_NAME || 'FilmHaat';
+    const defaultTitle = `${websiteName} - Search Movies and TV Shows`;
+    let currentTitle = defaultTitle;
+    
+    // Update title function
+    window.updatePageTitle = function(newTitle) {
+        if (newTitle && newTitle !== currentTitle) {
+            currentTitle = newTitle;
+            document.title = newTitle;
+        }
+    };
+    
+    // Reset to default title
+    window.resetPageTitle = function() {
+        currentTitle = defaultTitle;
+        document.title = defaultTitle;
+    };
+    
+    // Build category title mapping dynamically from config
+    const categoryTitleMap = {
+        'all': defaultTitle
+    };
+    
+    // Populate category titles from CATEGORIES_CONFIG
+    if (window.CATEGORIES_CONFIG && Array.isArray(window.CATEGORIES_CONFIG)) {
+        window.CATEGORIES_CONFIG.forEach(category => {
+            const categoryName = category.name; // lowercase
+            const displayName = category.displayName;
+            categoryTitleMap[categoryName] = `${displayName} Movies - ${websiteName}`;
+        });
+    }
+    
+    // Build section title mapping dynamically from config
+    const sectionTitleMap = {};
+    
+    // Populate section titles from ALL_SECTIONS_CONFIG
+    if (window.ALL_SECTIONS_CONFIG && Array.isArray(window.ALL_SECTIONS_CONFIG)) {
+        window.ALL_SECTIONS_CONFIG.forEach(section => {
+            const sectionId = section.id;
+            const displayName = section.displayName;
+            sectionTitleMap[sectionId] = `${displayName} - ${websiteName}`;
+        });
+    }
+    
+    // Track active category
+    window.currentActiveCategory = 'all';
+    
+    // Update title based on category
+    window.updateTitleByCategory = function(category) {
+        window.currentActiveCategory = category;
+        const title = categoryTitleMap[category] || defaultTitle;
+        window.updatePageTitle(title);
+    };
+    
+    // Update title when searching
+    window.updateTitleForSearch = function(query) {
+        if (query && query.trim()) {
+            window.updatePageTitle(`Search: ${query.trim()} - ${websiteName}`);
+        }
+    };
+    
+    // Intersection Observer for sections (only when category is 'all')
+    let sectionObserver = null;
+    
+    function initSectionObserver() {
+        const sections = document.querySelectorAll('.trending-section[id]');
+        
+        if (sections.length > 0 && !sectionObserver) {
+            const observerOptions = {
+                root: null,
+                rootMargin: '-20% 0px -60% 0px',
+                threshold: 0
+            };
+            
+            sectionObserver = new IntersectionObserver((entries) => {
+                // Only update title if category is 'all' (not filtered)
+                if (window.currentActiveCategory !== 'all') {
+                    return;
+                }
+                
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const sectionId = entry.target.id;
+                        const title = sectionTitleMap[sectionId];
+                        if (title) {
+                            window.updatePageTitle(title);
+                        }
+                    }
+                });
+            }, observerOptions);
+            
+            sections.forEach(section => {
+                sectionObserver.observe(section);
+            });
+        }
+    }
+    
+    // Initialize on page load
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(initSectionObserver, 1000);
+        });
+    } else {
+        setTimeout(initSectionObserver, 1000);
     }
 })();
 
@@ -149,8 +286,8 @@ function getRelativeTime(timestamp) {
     }
 }
 
-let currentThemeColor = '#000000';
-let targetThemeColor = '#000000';
+let currentThemeColor = '#0f0f0f';
+let targetThemeColor = '#0f0f0f';
 let isTransitioning = false;
 
 function handleScroll() {
@@ -164,9 +301,9 @@ function handleScroll() {
             // Only update to black when scrolling down
             if (themeColorMeta) {
                 const currentColor = themeColorMeta.getAttribute('content');
-                if (currentColor !== '#000000' && !isTransitioning) {
+                if (currentColor !== '#0f0f0f' && !isTransitioning) {
                     isTransitioning = true;
-                    smoothTransitionThemeColor(themeColorMeta, currentColor, '#000000', 300);
+                    smoothTransitionThemeColor(themeColorMeta, currentColor, '#0f0f0f', 300);
                 }
             }
         } else {
@@ -258,7 +395,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const themeColorMeta = document.getElementById('themeColor');
             if (themeColorMeta) {
                 originalThemeColor = themeColorMeta.getAttribute('content');
-                themeColorMeta.setAttribute('content', '#000000');
+                themeColorMeta.setAttribute('content', '#0f0f0f');
             }
             
             const bottomNav = document.querySelector('.bottom-nav');
@@ -989,10 +1126,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const illustrationSection = document.getElementById('heroIllustrationSection');
         
         try {
-            const response = await fetch('hero-carousel.php');
-            const data = await response.json();
+            const result = await fetchWithCacheCheck('hero-carousel.php');
+            const data = result.data;
+            const fromCache = result.fromCache;
             
             if (data.success && data.count > 0) {
+                // If data is from cache, immediately hide skeleton and show content
+                if (fromCache) {
+                    if (skeleton) skeleton.style.display = 'none';
+                    if (container) container.style.display = 'block';
+                    if (illustrationSection) illustrationSection.style.display = 'none';
+                }
+                
                 // Get random 10 movies for hero carousel
                 heroCarouselMovies = data.results.slice(0, 10);
                 
@@ -1010,34 +1155,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 displayHeroCarousel();
                 startHeroCarouselAutoPlay();
                 
-                // Wait for first image to load before hiding skeleton
-                const firstSlide = container?.querySelector('.hero-slide');
-                if (firstSlide) {
-                    const firstImage = firstSlide.querySelector('img');
-                    if (firstImage) {
-                        const hideSkeletonOnLoad = () => {
+                // Only wait for image load if data is NOT from cache
+                if (!fromCache) {
+                    // Wait for first image to load before hiding skeleton
+                    const firstSlide = container?.querySelector('.hero-slide');
+                    if (firstSlide) {
+                        const firstImage = firstSlide.querySelector('img');
+                        if (firstImage) {
+                            const hideSkeletonOnLoad = () => {
+                                if (skeleton) skeleton.style.display = 'none';
+                                if (container) container.style.display = 'block';
+                                if (illustrationSection) illustrationSection.style.display = 'none';
+                            };
+                            
+                            if (firstImage.complete) {
+                                hideSkeletonOnLoad();
+                            } else {
+                                firstImage.addEventListener('load', hideSkeletonOnLoad, { once: true });
+                                firstImage.addEventListener('error', hideSkeletonOnLoad, { once: true });
+                            }
+                        } else {
+                            // Fallback if no image found
                             if (skeleton) skeleton.style.display = 'none';
                             if (container) container.style.display = 'block';
                             if (illustrationSection) illustrationSection.style.display = 'none';
-                        };
-                        
-                        if (firstImage.complete) {
-                            hideSkeletonOnLoad();
-                        } else {
-                            firstImage.addEventListener('load', hideSkeletonOnLoad, { once: true });
-                            firstImage.addEventListener('error', hideSkeletonOnLoad, { once: true });
                         }
                     } else {
-                        // Fallback if no image found
+                        // Fallback if no slide found
                         if (skeleton) skeleton.style.display = 'none';
                         if (container) container.style.display = 'block';
                         if (illustrationSection) illustrationSection.style.display = 'none';
                     }
-                } else {
-                    // Fallback if no slide found
-                    if (skeleton) skeleton.style.display = 'none';
-                    if (container) container.style.display = 'block';
-                    if (illustrationSection) illustrationSection.style.display = 'none';
                 }
             } else {
                 // Show illustration section if no data available
@@ -1209,6 +1357,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Create dot
             const dot = document.createElement('button');
             dot.className = `hero-carousel-dot ${index === 0 ? 'active' : ''}`;
+            dot.setAttribute('aria-label', `Go to slide ${index + 1}`);
             dot.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -1913,7 +2062,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         let html = `
             <div class="carousel-container">
-                <button class="carousel-btn carousel-btn-prev" data-carousel="${trackId}">
+                <button class="carousel-btn carousel-btn-prev" data-carousel="${trackId}" aria-label="Previous">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                         <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                     </svg>
@@ -1946,7 +2095,7 @@ document.addEventListener('DOMContentLoaded', function() {
         html += `
                     </div>
                 </div>
-                <button class="carousel-btn carousel-btn-next" data-carousel="${trackId}">
+                <button class="carousel-btn carousel-btn-next" data-carousel="${trackId}" aria-label="Next">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                         <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
                     </svg>
@@ -2012,8 +2161,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load deduplicated sections - ensures no movie appears in multiple sections
     async function loadDeduplicatedSections(page = 1) {
         try {
-            const response = await fetch(`deduplicated-sections.php?page=${page}`);
-            const data = await response.json();
+            const result = await fetchWithCacheCheck(`deduplicated-sections.php?page=${page}`);
+            const data = result.data;
             
             if (data.success && data.sections) {
                 // Process all sections dynamically using generic display function
@@ -2039,12 +2188,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Initialize with staged loading strategy
+    // Initialize with staged loading strategy - Parallel loading for better performance
     async function initializeContentLoading() {
         try {
-            // Stage 1: Load hero carousel and deduplicated sections
-            await loadHeroCarousel();
-            await loadDeduplicatedSections();
+            // Stage 1: Load hero carousel and deduplicated sections in parallel
+            await Promise.all([
+                loadHeroCarousel(),
+                loadDeduplicatedSections()
+            ]);
             
             // Stage 2: Lazy load category sections when they become visible
             initializeLazyCategorySections();
@@ -2118,6 +2269,11 @@ document.addEventListener('DOMContentLoaded', function() {
         hideResults();
         hideError();
         
+        // Reset page title when clearing search
+        if (typeof window.resetPageTitle === 'function') {
+            window.resetPageTitle();
+        }
+        
         // Show category sections again when clearing search
         const categoriesSection = document.getElementById('categoriesSection');
         if (categoriesSection) {
@@ -2164,6 +2320,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!query) {
             showError('Please enter something in the search box');
             return;
+        }
+        
+        // Update page title for search
+        if (typeof window.updateTitleForSearch === 'function') {
+            window.updateTitleForSearch(query);
         }
 
         if (selectedWebsites.length === 0) {
@@ -2296,7 +2457,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const carouselId = `carousel-${websiteName}-${Math.random().toString(36).substr(2, 9)}`;
                 let carouselHTML = `
                     <div class="carousel-container">
-                        <button class="carousel-btn carousel-btn-prev" data-carousel="${carouselId}">
+                        <button class="carousel-btn carousel-btn-prev" data-carousel="${carouselId}" aria-label="Previous">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                                 <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                             </svg>
@@ -2319,7 +2480,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 carouselHTML += `
                             </div>
                         </div>
-                        <button class="carousel-btn carousel-btn-next" data-carousel="${carouselId}">
+                        <button class="carousel-btn carousel-btn-next" data-carousel="${carouselId}" aria-label="Next">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                                 <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
                             </svg>
@@ -2421,7 +2582,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const carouselId = `carousel-${Math.random().toString(36).substr(2, 9)}`;
                     let carouselHTML = `
                         <div class="carousel-container">
-                            <button class="carousel-btn carousel-btn-prev" data-carousel="${carouselId}">
+                            <button class="carousel-btn carousel-btn-prev" data-carousel="${carouselId}" aria-label="Previous">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                                     <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                                 </svg>
@@ -2444,7 +2605,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     carouselHTML += `
                                 </div>
                             </div>
-                            <button class="carousel-btn carousel-btn-next" data-carousel="${carouselId}">
+                            <button class="carousel-btn carousel-btn-next" data-carousel="${carouselId}" aria-label="Next">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                                     <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
                                 </svg>
@@ -2784,8 +2945,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         try {
-            const response = await fetch(`categories/index.php?category=${categoryName}`);
-            const data = await response.json();
+            const result = await fetchWithCacheCheck(`categories/index.php?category=${categoryName}`);
+            const data = result.data;
             
             if (data.success && data.count > 0) {
                 // Update the category data store dynamically
@@ -3242,7 +3403,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         let carouselHTML = `
             <div class="carousel-container">
-                <button class="carousel-btn carousel-btn-prev" data-carousel="${carouselId}">
+                <button class="carousel-btn carousel-btn-prev" data-carousel="${carouselId}" aria-label="Previous">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                         <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                     </svg>
@@ -3267,7 +3428,7 @@ document.addEventListener('DOMContentLoaded', function() {
         carouselHTML += `
                     </div>
                 </div>
-                <button class="carousel-btn carousel-btn-next" data-carousel="${carouselId}">
+                <button class="carousel-btn carousel-btn-next" data-carousel="${carouselId}" aria-label="Next">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                         <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
                     </svg>
@@ -3328,8 +3489,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function loadCategoryPosters() {
         try {
-            const response = await fetch('category-posters.php');
-            const data = await response.json();
+            const result = await fetchWithCacheCheck('category-posters.php');
+            const data = result.data;
             
             if (data.success && data.posters) {
                 const categoryItems = document.querySelectorAll('.category-item');
@@ -3364,6 +3525,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 item.classList.add('active');
 
                 const category = item.getAttribute('data-category');
+                
+                // Update page title based on category
+                if (typeof window.updateTitleByCategory === 'function') {
+                    window.updateTitleByCategory(category);
+                }
+                
                 filterByCategory(category);
             });
         });
@@ -3917,4 +4084,26 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }, 5000);
+})();
+
+// Logo Click to Refresh Page
+(function() {
+    function addLogoClickListeners() {
+        const logos = document.querySelectorAll('.logo');
+        
+        logos.forEach(logo => {
+            logo.style.cursor = 'pointer';
+            
+            logo.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.reload();
+            });
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', addLogoClickListeners);
+    } else {
+        addLogoClickListeners();
+    }
 })();

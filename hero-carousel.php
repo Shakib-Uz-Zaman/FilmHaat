@@ -1,5 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: public, max-age=300, stale-while-revalidate=600');
+header('Vary: Accept-Encoding');
 
 require_once 'config.php';
 require_once 'generic-section.php';

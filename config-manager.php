@@ -30,7 +30,7 @@ $config = getCurrentConfig();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/webp" href="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>">
     <link rel="apple-touch-icon" href="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>">
-    <title>Config Manager</title>
+    <title>Config Manager - <?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></title>
     <style>
         * {
             margin: 0;
@@ -55,7 +55,7 @@ $config = getCurrentConfig();
             width: 100%;
             padding: 10px 15px;
             z-index: 1000;
-            background-color: #000000;
+            background-color: #0f0f0f;
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             margin: 0;
@@ -208,7 +208,7 @@ $config = getCurrentConfig();
             top: 50%;
             transform: translateY(-50%);
             height: 52px;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(15, 15, 15, 0.7);
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -228,7 +228,7 @@ $config = getCurrentConfig();
         }
 
         .carousel-btn:hover {
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(15, 15, 15, 0.85);
         }
 
         .carousel-btn.left {
@@ -652,7 +652,7 @@ $config = getCurrentConfig();
 
         .website-item:hover {
             border-color: #cbd5e1;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 12px rgba(15,15,15,0.05);
             transform: translateY(-1px);
         }
 
@@ -792,7 +792,7 @@ $config = getCurrentConfig();
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.4);
+            background: rgba(15,15,15,0.4);
             backdrop-filter: blur(4px);
             z-index: 1000;
             justify-content: center;
@@ -817,7 +817,7 @@ $config = getCurrentConfig();
             max-width: 600px;
             max-height: 90vh;
             overflow-y: auto;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+            box-shadow: 0 20px 50px rgba(15,15,15,0.15);
             animation: slideUp 0.3s ease;
         }
 
@@ -1440,7 +1440,7 @@ $config = getCurrentConfig();
     <nav class="navbar">
         <div class="nav-container">
             <div class="logo">
-                <img src="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>" alt="" class="logo-image">
+                <img src="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>" alt="" class="logo-image" width="150" height="150">
                 <span class="logo-text"><?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></span>
             </div>
             <div class="nav-right">

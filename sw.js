@@ -1,10 +1,10 @@
-const CACHE_NAME = 'filmhaat-v1';
-const STATIC_CACHE = 'filmhaat-static-v1';
+const CACHE_NAME = 'filmhaat-v2';
+const STATIC_CACHE = 'filmhaat-static-v2';
 const DYNAMIC_CACHE = 'filmhaat-dynamic-v1';
 
 const STATIC_ASSETS = [
   '/styles.css',
-  '/script.js',
+  '/script.min.js',
   '/manifest.php',
   '/offline.html',
   '/icons/icon-192x192.webp',

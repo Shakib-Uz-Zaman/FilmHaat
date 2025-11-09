@@ -1,15 +1,20 @@
 <?php
+require_once 'config.php';
+
 header('Content-Type: application/manifest+json');
 header('Cache-Control: max-age=86400'); // Cache for 1 day
 
+$websiteName = $SITE_SETTINGS['website_name'] ?? 'FilmHaat';
+$websiteDescription = 'Find your favorite movies and series from multiple websites';
+
 $manifest = [
-    "name" => "FilmHaat - Watch your favorite movies and series",
-    "short_name" => "FilmHaat",
-    "description" => "Find your favorite movies and series from multiple websites",
+    "name" => "$websiteName - $websiteDescription",
+    "short_name" => "$websiteName",
+    "description" => "$websiteDescription",
     "start_url" => "/",
     "display" => "standalone",
-    "background_color" => "#000000",
-    "theme_color" => "#000000",
+    "background_color" => "#0f0f0f",
+    "theme_color" => "#0f0f0f",
     "orientation" => "portrait-primary",
     "scope" => "/",
     "icons" => [

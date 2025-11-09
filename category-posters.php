@@ -1,6 +1,24 @@
 <?php
 header('Content-Type: application/json');
+header('Cache-Control: public, max-age=600, stale-while-revalidate=1200');
+header('Vary: Accept-Encoding');
 require_once 'config.php';
+
+$cacheDir = __DIR__ . '/cache';
+$cacheFile = $cacheDir . '/category-posters-cache.json';
+$cacheLifetime = 600;
+
+if (!is_dir($cacheDir)) {
+    mkdir($cacheDir, 0755, true);
+}
+
+if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $cacheLifetime) {
+    $cachedData = file_get_contents($cacheFile);
+    if ($cachedData) {
+        echo $cachedData;
+        exit;
+    }
+}
 
 function fetchRandomPoster($websiteName, $website) {
     $url = $website['url'];
@@ -9,8 +27,8 @@ function fetchRandomPoster($websiteName, $website) {
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 8);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
     curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
@@ -101,8 +119,22 @@ foreach ($CATEGORIES_WEBSITES as $categoryKey => $categoryData) {
     }
 }
 
-echo json_encode([
+$output = json_encode([
     'success' => true,
     'posters' => $posters
 ]);
+
+$hasAnyPoster = false;
+foreach ($posters as $poster) {
+    if ($poster !== null) {
+        $hasAnyPoster = true;
+        break;
+    }
+}
+
+if ($hasAnyPoster) {
+    file_put_contents($cacheFile, $output);
+}
+
+echo $output;
 ?>

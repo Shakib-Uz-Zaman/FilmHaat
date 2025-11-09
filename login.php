@@ -1,5 +1,6 @@
 <?php
 require_once 'auth-config.php';
+require_once 'config.php';
 
 ini_set('session.cookie_httponly', 1);
 ini_set('session.use_only_cookies', 1);
@@ -70,7 +71,7 @@ $csrf_token = generateCSRFToken();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/webp" href="attached_image/logo-image.webp">
     <link rel="apple-touch-icon" href="attached_image/logo-image.webp">
-    <title>Admin Login - FilmHaat</title>
+    <title>Admin Login - <?php echo htmlspecialchars($SITE_SETTINGS['website_name'] ?? 'FilmHaat'); ?></title>
     <style>
         * {
             margin: 0;
@@ -208,7 +209,7 @@ $csrf_token = generateCSRFToken();
 </head>
 <body>
     <div class="login-container">
-        <h1>Log in to FilmHaat</h1>
+        <h1>Log in to <?php echo htmlspecialchars($SITE_SETTINGS['website_name'] ?? 'FilmHaat'); ?></h1>
 
         <?php if ($lockout_message): ?>
             <div class="lockout-message">

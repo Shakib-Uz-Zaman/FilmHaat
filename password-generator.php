@@ -1,4 +1,6 @@
 <?php
+require_once 'config.php';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
     
@@ -15,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Password Hash Generator</title>
+    <title>Password Hash Generator - <?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></title>
     <style>
         * {
             margin: 0;

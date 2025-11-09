@@ -22,13 +22,11 @@ $categoryLower = strtolower($category);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta name="theme-color" content="#000000" id="themeColor">
+    <meta name="theme-color" content="#0f0f0f" id="themeColor">
     <link rel="icon" type="image/webp" href="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>">
     <link rel="apple-touch-icon" href="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>">
     <title><?php echo htmlspecialchars($displayName); ?> - <?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <meta name="description" content="Browse <?php echo htmlspecialchars($displayName); ?> movies and TV shows from multiple websites. Discover content by category - completely free with no sign-up or subscription required.">
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.json">
     <script>
@@ -67,8 +65,8 @@ $categoryLower = strtolower($category);
             right: 0;
             bottom: 0;
             background: 
-                linear-gradient(to bottom, var(--gradient-color-top, rgba(0,0,0,1)) 0%, transparent 60%),
-                rgba(0, 0, 0, 0.3);
+                linear-gradient(to bottom, var(--gradient-color-top, rgba(15,15,15,1)) 0%, transparent 60%),
+                rgba(15, 15, 15, 0.3);
             z-index: 1;
         }
         
@@ -79,7 +77,7 @@ $categoryLower = strtolower($category);
             left: 0;
             right: 0;
             height: 95%;
-            background: linear-gradient(to top, rgba(0,0,0,1) 0%, transparent 100%);
+            background: linear-gradient(to top, rgba(15,15,15,1) 0%, transparent 100%);
             z-index: 2;
         }
         
@@ -174,7 +172,7 @@ $categoryLower = strtolower($category);
         }
         
         .category-header-nav.scrolled {
-            background: rgba(0, 0, 0, 0.95) !important;
+            background: rgba(15, 15, 15, 0.95) !important;
             backdrop-filter: blur(10px) !important;
             -webkit-backdrop-filter: blur(10px) !important;
         }
@@ -277,6 +275,7 @@ $categoryLower = strtolower($category);
     </style>
 </head>
 <body>
+    <main>
     <div class="category-page-header" id="categoryPageHeader">
         <div class="category-header-nav" id="categoryHeaderNav">
             <button onclick="history.back()" class="back-button">
@@ -301,7 +300,7 @@ $categoryLower = strtolower($category);
             <div class="search-popup-header">
                 <div class="search-popup-header-container">
                     <div class="logo">
-                        <img src="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>" alt="" class="logo-image">
+                        <img src="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>" alt="" class="logo-image" width="150" height="150">
                         <span class="logo-text"><?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></span>
                     </div>
                     <button class="search-popup-close" id="searchPopupClose">
@@ -311,7 +310,7 @@ $categoryLower = strtolower($category);
                     </button>
                 </div>
             </div>
-            <div class="search-section" style="background: linear-gradient(rgba(0,0,0,1) 0%, rgba(0,0,0,0.80) 15%, rgba(0,0,0,0.50) 75%, rgba(0,0,0,0.50) 100%), url('<?php echo htmlspecialchars($SITE_SETTINGS['background_image']); ?>'); background-size: cover; background-position: center; background-repeat: no-repeat;">
+            <div class="search-section" style="background: linear-gradient(rgba(15,15,15,1) 0%, rgba(15,15,15,0.80) 15%, rgba(15,15,15,0.50) 75%, rgba(15,15,15,0.50) 100%), url('<?php echo htmlspecialchars($SITE_SETTINGS['background_image']); ?>'); background-size: cover; background-position: center; background-repeat: no-repeat;">
                 <div class="hero-content">
                     <h1 class="hero-title">Find Your Favorite Movies & Series</h1>
                     <p class="hero-subtitle">Search Multiple Websites Together</p>
@@ -455,6 +454,7 @@ $categoryLower = strtolower($category);
             </div>
         </div>
     </div>
+    </main>
 
     <script>
         const CATEGORY = '<?php echo $categoryLower; ?>';
@@ -463,7 +463,7 @@ $categoryLower = strtolower($category);
         let isLoading = false;
         let hasMoreMovies = true;
         let allMovies = [];
-        let headerOriginalThemeColor = '#000000';
+        let headerOriginalThemeColor = '#0f0f0f';
 
         // Fixed Header Scroll Logic
         const categoryHeaderNav = document.getElementById('categoryHeaderNav');
@@ -513,7 +513,7 @@ $categoryLower = strtolower($category);
             if (scrollTop > threshold) {
                 categoryHeaderNav.classList.add('scrolled');
                 if (themeColorMeta) {
-                    themeColorMeta.setAttribute('content', '#000000');
+                    themeColorMeta.setAttribute('content', '#0f0f0f');
                 }
             } else {
                 categoryHeaderNav.classList.remove('scrolled');
@@ -1046,7 +1046,7 @@ $categoryLower = strtolower($category);
                 const themeColorMeta = document.getElementById('themeColor');
                 if (themeColorMeta) {
                     originalThemeColor = themeColorMeta.getAttribute('content');
-                    themeColorMeta.setAttribute('content', '#000000');
+                    themeColorMeta.setAttribute('content', '#0f0f0f');
                 }
                 
                 searchPopupModal.style.display = 'block';
@@ -1099,7 +1099,7 @@ $categoryLower = strtolower($category);
             }
         });
     </script>
-    <script src="script.js"></script>
+    <script src="script.js" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

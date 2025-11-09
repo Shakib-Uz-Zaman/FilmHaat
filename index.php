@@ -5,15 +5,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache">
-    <meta name="theme-color" content="#000000" id="themeColor">
+    <meta name="theme-color" content="#0f0f0f" id="themeColor">
     <link rel="icon" type="image/webp" href="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>">
     <link rel="apple-touch-icon" href="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>">
-    <title><?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?> - Movie & Series Search</title>
+    <title><?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?> - Search Movies and TV Shows</title>
+    <meta name="description" content="Discover movies and TV shows from multiple websites in one place. Explore what's trending, browse categories, and quickly find your favorites. It's completely free with no sign-up, fees, or subscription.">
     <link rel="preload" as="image" href="<?php echo htmlspecialchars($SITE_SETTINGS['background_image']); ?>" type="image/webp">
     <link rel="preload" as="image" href="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>" type="image/webp">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://catimages.org">
+    <link rel="preconnect" href="https://image.tmdb.org">
+    <link rel="dns-prefetch" href="https://catimages.org">
+    <link rel="dns-prefetch" href="https://image.tmdb.org">
+    <link rel="preload" href="styles.css" as="style">
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.php">
     
@@ -27,7 +30,7 @@
             -webkit-transform: translateX(-50%) translateZ(0) !important;
             width: calc(100% - 30px) !important;
             max-width: calc(100% - 20px) !important;
-            background: rgba(20, 20, 20, 0.75);
+            background: rgba(26, 26, 26, 0.85);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             display: flex;
@@ -199,7 +202,7 @@
                         navbar.classList.add('scrolled');
                     }
                     if (themeColorMeta) {
-                        themeColorMeta.setAttribute('content', '#000000');
+                        themeColorMeta.setAttribute('content', '#0f0f0f');
                     }
                 }
             }
@@ -251,7 +254,7 @@
     <nav class="navbar">
         <div class="nav-container">
             <div class="logo">
-                <img src="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>" alt="" class="logo-image">
+                <img src="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>" alt="" class="logo-image" width="150" height="150">
                 <span class="logo-text"><?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></span>
             </div>
             <div class="nav-links">
@@ -281,7 +284,7 @@
                 </a>
             </div>
             <div class="nav-search">
-                <button type="button" id="navSearchBtn" class="nav-search-btn">
+                <button type="button" id="navSearchBtn" class="nav-search-btn" aria-label="Open search">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="11" cy="11" r="8"></circle>
                         <path d="m21 21-4.35-4.35"></path>
@@ -298,25 +301,27 @@
                         placeholder="" 
                         autocomplete="off"
                         readonly
+                        aria-label="Search movies and series"
                     />
                 </div>
             </div>
         </div>
     </nav>
 
+    <main>
     <div class="hero-carousel-section" id="heroCarouselSection">
         <div class="hero-carousel-skeleton" id="heroCarouselSkeleton">
             <div class="skeleton-shimmer"></div>
         </div>
         <div class="hero-carousel-container" style="display: none;">
-            <button class="hero-carousel-btn hero-carousel-btn-prev" id="heroCarouselPrevBtn">
+            <button class="hero-carousel-btn hero-carousel-btn-prev" id="heroCarouselPrevBtn" aria-label="Previous slide">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                 </svg>
             </button>
             <div class="hero-carousel-track" id="heroCarouselTrack">
             </div>
-            <button class="hero-carousel-btn hero-carousel-btn-next" id="heroCarouselNextBtn">
+            <button class="hero-carousel-btn hero-carousel-btn-next" id="heroCarouselNextBtn" aria-label="Next slide">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
                 </svg>
@@ -327,7 +332,7 @@
 
     <div class="hero-illustration-section" id="heroIllustrationSection" style="display: none;">
         <div class="hero-illustration-content">
-            <img src="attached_image/illustration/hero-illustration.webp" alt="Hero Illustration" class="hero-illustration-image">
+            <img src="attached_image/illustration/hero-illustration.webp" alt="Hero Illustration" class="hero-illustration-image" width="512" height="512">
             <p class="hero-illustration-message">Oops! No content available.</p>
         </div>
     </div>
@@ -337,17 +342,17 @@
             <div class="search-popup-header">
                 <div class="search-popup-header-container">
                     <div class="logo">
-                        <img src="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>" alt="" class="logo-image">
+                        <img src="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>" alt="" class="logo-image" width="150" height="150">
                         <span class="logo-text"><?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></span>
                     </div>
-                    <button class="search-popup-close" id="searchPopupClose">
+                    <button class="search-popup-close" id="searchPopupClose" aria-label="Close search">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                         </svg>
                     </button>
                 </div>
             </div>
-            <div class="search-section" style="background: linear-gradient(rgba(0,0,0,1) 0%, rgba(0,0,0,0.80) 15%, rgba(0,0,0,0.50) 75%, rgba(0,0,0,0.50) 100%), url('<?php echo htmlspecialchars($SITE_SETTINGS['background_image']); ?>'); background-size: cover; background-position: center; background-repeat: no-repeat;">
+            <div class="search-section" style="background: linear-gradient(rgba(15,15,15,1) 0%, rgba(15,15,15,0.80) 15%, rgba(15,15,15,0.50) 75%, rgba(15,15,15,0.50) 100%), url('<?php echo htmlspecialchars($SITE_SETTINGS['background_image']); ?>'); background-size: cover; background-position: center; background-repeat: no-repeat;">
                 <div class="hero-content">
                     <h1 class="hero-title">Find Your Favorite Movies & Series</h1>
                     <p class="hero-subtitle">Search Multiple Websites Together</p>
@@ -356,7 +361,7 @@
                         <form id="searchForm">
                             <div class="search-box">
                                 <div class="search-input-wrapper">
-                                    <button type="button" id="filterBtn" class="filter-btn">
+                                    <button type="button" id="filterBtn" class="filter-btn" aria-label="Filter websites">
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                                             <circle cx="7" cy="7" r="4" fill="white"/>
                                             <rect x="1" y="6" width="5" height="2" rx="1" fill="white"/>
@@ -392,8 +397,9 @@
                                         placeholder="" 
                                         required
                                         autocomplete="off"
+                                        aria-label="Search for movies and series"
                                     />
-                                    <button type="button" id="clearBtn" class="clear-btn" style="display: none;">
+                                    <button type="button" id="clearBtn" class="clear-btn" style="display: none;" aria-label="Clear search">
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
                                             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                                         </svg>
@@ -425,7 +431,7 @@
                 <div id="recentViewedContainer" class="recent-viewed-container" style="display: block;">
                     <div class="section-header">
                         <h2 class="website-name">Recent Viewed</h2>
-                        <button id="clearRecentViewedBtn" class="clear-recent-btn" title="Clear All">
+                        <button id="clearRecentViewedBtn" class="clear-recent-btn" title="Clear All" aria-label="Clear all recent viewed">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -444,15 +450,22 @@
     <div id="pwaInstallBanner" class="pwa-install-banner" style="display: none;">
         <div class="pwa-banner-content">
             <div class="pwa-banner-logo">
-                <img src="attached_image/pwa-logo.webp" alt="<?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?>" class="pwa-logo-img">
+                <img src="attached_image/pwa-logo.webp" alt="<?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?>" class="pwa-logo-img" width="512" height="512">
             </div>
             <div class="pwa-banner-info">
                 <div class="pwa-banner-title"><?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?> App</div>
                 <div class="pwa-banner-subtitle">Install the app for better experience</div>
             </div>
             <div class="pwa-banner-actions">
-                <button id="pwaInstallBtn" class="pwa-install-btn">Install</button>
-                <button id="pwaCloseBtn" class="pwa-close-btn">
+                <button id="pwaInstallBtn" class="pwa-install-btn" aria-label="Install app">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Install</span>
+                </button>
+                <button id="pwaCloseBtn" class="pwa-close-btn" aria-label="Close install banner">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                     </svg>
@@ -469,7 +482,7 @@
         </div>
         <div class="categories-carousel">
             <div class="carousel-container">
-                <button class="carousel-btn carousel-btn-prev" data-carousel="categoriesTrack">
+                <button class="carousel-btn carousel-btn-prev" data-carousel="categoriesTrack" aria-label="Previous categories">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                         <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                     </svg>
@@ -498,7 +511,7 @@
                         <?php endforeach; ?>
                     </div>
                 </div>
-                <button class="carousel-btn carousel-btn-next" data-carousel="categoriesTrack">
+                <button class="carousel-btn carousel-btn-next" data-carousel="categoriesTrack" aria-label="Next categories">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                         <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
                     </svg>
@@ -549,8 +562,8 @@
                 <?php echo htmlspecialchars($section['name']); ?>
             </h2>
             <?php if ($configKey !== 'WEEKLY_TOP_10'): ?>
-            <a href="more.php?category=<?php echo strtolower($configKey); ?>" class="more-btn" id="<?php echo $section['moreBtnId']; ?>">
-                More<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <a href="more.php?category=<?php echo strtolower($configKey); ?>" class="more-btn" id="<?php echo $section['moreBtnId']; ?>" aria-label="See All <?php echo htmlspecialchars($section['name']); ?>">
+                See All<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
                 </svg>
             </a>
@@ -613,8 +626,8 @@
             <h2 class="website-name">
                 <?php echo $displayName; ?>
             </h2>
-            <a href="more.php?category=<?php echo $categoryLower; ?>" class="more-btn" id="<?php echo $moreBtnId; ?>">
-                More<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle;">
+            <a href="more.php?category=<?php echo $categoryLower; ?>" class="more-btn" id="<?php echo $moreBtnId; ?>" aria-label="See All <?php echo $displayName; ?>">
+                See All<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle;">
                     <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
                 </svg>
             </a>
@@ -683,8 +696,12 @@
             </div>
         </div>
     </div>
+    </main>
 
     <script>
+        // Pass website name to JavaScript for dynamic titles
+        window.WEBSITE_NAME = <?php echo json_encode($SITE_SETTINGS['website_name']); ?>;
+        
         window.CATEGORIES_CONFIG = <?php 
             $categoriesConfig = [];
             foreach ($CATEGORIES_WEBSITES as $categoryKey => $categoryData) {
@@ -710,7 +727,7 @@
             echo json_encode($allSectionsConfig);
         ?>;
     </script>
-    <script src="script.js?v=<?php echo time(); ?>"></script>
+    <script src="script.js?v=<?php echo time(); ?>" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
