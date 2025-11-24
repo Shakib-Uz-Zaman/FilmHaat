@@ -7,7 +7,7 @@ $category = isset($_GET['category']) ? strtoupper($_GET['category']) : '';
 // Validate category exists
 $allCategories = array_merge($ALL_SECTION_WEBSITES, $CATEGORIES_WEBSITES);
 if (empty($category) || !isset($allCategories[$category])) {
-    echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=index.php"></head><body><script>window.location.href="index.php";</script></body></html>';
+    echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=/"></head><body><script>window.location.href="/";</script></body></html>';
     exit;
 }
 
