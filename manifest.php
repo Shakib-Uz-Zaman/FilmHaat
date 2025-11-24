@@ -5,7 +5,7 @@ header('Content-Type: application/manifest+json');
 header('Cache-Control: max-age=86400'); // Cache for 1 day
 
 $websiteName = $SITE_SETTINGS['website_name'] ?? 'FilmHaat';
-$websiteDescription = 'Find your favorite movies and series from multiple websites';
+$websiteDescription = 'Watch Movies & Series';
 
 $manifest = [
     "name" => "$websiteName - $websiteDescription",

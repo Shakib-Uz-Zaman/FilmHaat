@@ -1,5 +1,9 @@
 // Cache-aware fetch helper - checks cache first to skip skeleton loading
+// Cache expires after 5 minutes (300 seconds) but keeps stale cache for offline support
 async function fetchWithCacheCheck(url) {
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+    let staleCache = null;
+    
     try {
         if ('caches' in window) {
             const cache = await caches.open('filmhaat-dynamic-v1');
@@ -7,22 +11,75 @@ async function fetchWithCacheCheck(url) {
             
             if (cachedResponse) {
                 const cachedData = await cachedResponse.json();
-                return {
-                    data: cachedData,
-                    fromCache: true
-                };
+                
+                // Check if cache has timestamp and if it's still valid
+                if (cachedData.cachedAt) {
+                    const now = Date.now();
+                    const cacheAge = now - cachedData.cachedAt;
+                    
+                    // If cache is still fresh (less than 5 minutes old)
+                    if (cacheAge < CACHE_DURATION) {
+                        return {
+                            data: cachedData.data,
+                            fromCache: true
+                        };
+                    }
+                    
+                    // Cache is stale, but keep it as fallback for offline support
+                    staleCache = cachedData.data;
+                }
             }
         }
     } catch (error) {
         console.warn('Cache check failed:', error);
     }
     
-    const response = await fetch(url);
-    const data = await response.json();
-    return {
-        data: data,
-        fromCache: false
-    };
+    // Try to fetch fresh data from network
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        // Store in cache with timestamp
+        try {
+            if ('caches' in window) {
+                const cache = await caches.open('filmhaat-dynamic-v1');
+                const dataWithTimestamp = {
+                    data: data,
+                    cachedAt: Date.now()
+                };
+                
+                // Create a new Response object to cache
+                const responseToCache = new Response(JSON.stringify(dataWithTimestamp), {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                await cache.put(url, responseToCache);
+            }
+        } catch (error) {
+            console.warn('Failed to cache response:', error);
+        }
+        
+        return {
+            data: data,
+            fromCache: false
+        };
+    } catch (fetchError) {
+        // Network fetch failed (offline or error)
+        // Return stale cache if available
+        if (staleCache) {
+            console.log('Network failed, using stale cache for:', url);
+            return {
+                data: staleCache,
+                fromCache: true,
+                stale: true
+            };
+        }
+        
+        // No cache available, throw error
+        throw fetchError;
+    }
 }
 
 // Navigation Icon Switcher - Active/Inactive States
@@ -281,8 +338,17 @@ function getRelativeTime(timestamp) {
         return 'Today';
     } else if (diffDays === 1) {
         return 'Yesterday';
-    } else {
+    } else if (diffDays < 7) {
         return `${diffDays} Days Ago`;
+    } else if (diffDays < 30) {
+        const weeks = Math.floor(diffDays / 7);
+        return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+    } else if (diffDays < 365) {
+        const months = Math.floor(diffDays / 30);
+        return months === 1 ? '1 month ago' : `${months} months ago`;
+    } else {
+        const years = Math.floor(diffDays / 365);
+        return years === 1 ? '1 year ago' : `${years} years ago`;
     }
 }
 

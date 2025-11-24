@@ -402,6 +402,7 @@ require_once 'config.php';
             margin: 0 auto;
             padding: 40px 20px;
             padding-bottom: calc(80px + env(safe-area-inset-bottom));
+            background-color: #0f0f0f;
         }
         
         @media (max-width: 768px) and (orientation: portrait) {
