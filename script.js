@@ -455,6 +455,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let selectedWebsites = Array.from(filterCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
     let originalThemeColor = null;
     let previousActiveNavItem = null;
+    
+    let searchPaginationData = {};
+    let currentSearchQuery = '';
 
     function openSearchPopup() {
         if (searchPopupModal) {
@@ -1020,7 +1023,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let cleaned = title;
         
         // Remove platform names and abbreviations
-        cleaned = cleaned.replace(/\b(Netflix|Amazon|Prime|Disney|Hotstar|ZEE5|SonyLIV|NETFLiX|Original|AMZN|NFLX)\b[-\s]*/gi, '');
+        cleaned = cleaned.replace(/\b(Amazon|Prime|Disney|Hotstar|ZEE5|SonyLIV|Original|AMZN|NFLX)\b[-\s]*/gi, '');
         
         // Remove content within various brackets FIRST
         cleaned = cleaned.replace(/\[.*?\]/g, ''); // Remove all square brackets and content
@@ -2296,6 +2299,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
+        
+        // Search results Next card click handler
+        const searchNextCard = e.target.closest('.trending-next-card[id^="search-next-"]');
+        if (searchNextCard) {
+            const websiteName = searchNextCard.getAttribute('data-website');
+            if (websiteName && searchPaginationData[websiteName]) {
+                await loadMoreSearchResults(websiteName);
+            }
+        }
     });
 
 
@@ -2387,6 +2399,9 @@ document.addEventListener('DOMContentLoaded', function() {
             showError('Please enter something in the search box');
             return;
         }
+        
+        currentSearchQuery = query;
+        searchPaginationData = {};
         
         // Update page title for search
         if (typeof window.updateTitleForSearch === 'function') {
@@ -2510,17 +2525,29 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!websiteDiv) return;
 
         if (data.success) {
+            searchPaginationData[websiteName] = {
+                page: data.page || 1,
+                hasMore: data.hasMore || false,
+                results: data.results || [],
+                carouselId: `carousel-${websiteName}-${Math.random().toString(36).substr(2, 9)}`
+            };
+            
             const headerHTML = `
                 <div class="website-header">
                     <span class="website-name">${escapeHtml(data.website)}</span>
-                    <span class="result-count">${data.count} results</span>
+                    <a href="search-results.php?query=${encodeURIComponent(currentSearchQuery)}&website=${encodeURIComponent(data.website)}" class="more-btn" aria-label="See All ${escapeHtml(data.website)} results">
+                        See All<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                        </svg>
+                    </a>
                 </div>
             `;
 
             if (data.count === 0) {
                 websiteDiv.innerHTML = headerHTML + '<div class="no-results">No results found on this site</div>';
             } else {
-                const carouselId = `carousel-${websiteName}-${Math.random().toString(36).substr(2, 9)}`;
+                const carouselId = searchPaginationData[websiteName].carouselId;
+                const nextCardId = `search-next-${websiteName}`;
                 let carouselHTML = `
                     <div class="carousel-container">
                         <button class="carousel-btn carousel-btn-prev" data-carousel="${carouselId}" aria-label="Previous">
@@ -2535,13 +2562,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 data.results.forEach(item => {
                     carouselHTML += `
                         <div class="carousel-item-wrapper">
-                            <div class="carousel-item" data-title="${escapeHtml(item.title)}" data-link="${escapeHtml(item.link)}" data-image="${escapeHtml(item.image || '')}" data-language="${escapeHtml(item.language || '')}" data-genre="${escapeHtml(item.genre || '')}" data-website="${escapeHtml(item.website || '')}">
+                            <div class="carousel-item" data-title="${escapeHtml(item.title)}" data-link="${escapeHtml(item.link)}" data-image="${escapeHtml(item.image || '')}" data-language="${escapeHtml(item.language || '')}" data-genre="${escapeHtml(item.genre || '')}" data-website="${escapeHtml(websiteName)}">
                                 ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}" class="result-image lazy-image" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22280%22%3E%3Crect fill=%22%23ddd%22 width=%22200%22 height=%22280%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3ENo Image%3C/text%3E%3C/svg%3E'">` : '<div class="result-image"></div>'}
                             </div>
                             <div class="carousel-item-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div>
                         </div>
                     `;
                 });
+                
+                if (data.hasMore) {
+                    const randomImage = data.results.length > 0 ? data.results[Math.floor(Math.random() * data.results.length)].image : '';
+                    carouselHTML += `
+                        <div class="carousel-item-wrapper">
+                            <div class="trending-next-card" id="${nextCardId}" data-website="${escapeHtml(websiteName)}" style="background-image: url('${escapeHtml(randomImage)}');">
+                                <span class="trending-next-card-text">Next</span>
+                            </div>
+                        </div>
+                    `;
+                }
                 
                 carouselHTML += `
                             </div>
@@ -2557,7 +2595,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 initializeSingleCarousel(carouselId);
                 
-                // Initialize movie card clicks after DOM is rendered
                 requestAnimationFrame(() => {
                     initializeMovieCardClicks();
                 });
@@ -2573,6 +2610,113 @@ document.addEventListener('DOMContentLoaded', function() {
                     ⚠️ Error: ${escapeHtml(data.error)}
                 </div>
             `;
+        }
+    }
+
+    async function loadMoreSearchResults(websiteName) {
+        if (!searchPaginationData[websiteName] || !currentSearchQuery) return;
+        
+        const paginationInfo = searchPaginationData[websiteName];
+        const carouselId = paginationInfo.carouselId;
+        const carousel = document.getElementById(carouselId);
+        if (!carousel) return;
+        
+        const currentScrollPosition = carousel.scrollLeft;
+        const itemWidth = carousel.querySelector('.carousel-item-wrapper')?.offsetWidth || 150;
+        const containerWidth = carousel.offsetWidth;
+        const itemsVisible = Math.floor(containerWidth / itemWidth);
+        const itemsToScroll = Math.max(1, itemsVisible - 1);
+        const scrollTarget = currentScrollPosition + (itemWidth * itemsToScroll);
+        
+        const nextCard = document.getElementById(`search-next-${websiteName}`);
+        if (nextCard && nextCard.parentElement) {
+            nextCard.parentElement.remove();
+        }
+        
+        const skeletonCount = 8;
+        for (let i = 0; i < skeletonCount; i++) {
+            const skeletonHtml = `
+                <div class="carousel-item-wrapper skeleton-item loading-skeleton">
+                    <div class="carousel-item">
+                        <div class="skeleton-image" style="background: rgba(26, 26, 26);"></div>
+                    </div>
+                </div>
+            `;
+            carousel.insertAdjacentHTML('beforeend', skeletonHtml);
+        }
+        
+        const nextPage = paginationInfo.page + 1;
+        
+        try {
+            const response = await fetch(`search-single.php?query=${encodeURIComponent(currentSearchQuery)}&website=${encodeURIComponent(websiteName)}&page=${nextPage}`);
+            const data = await response.json();
+            
+            const skeletons = carousel.querySelectorAll('.loading-skeleton');
+            skeletons.forEach(skeleton => skeleton.remove());
+            
+            if (data.success && data.count > 0) {
+                searchPaginationData[websiteName].page = data.page || nextPage;
+                searchPaginationData[websiteName].hasMore = data.hasMore || false;
+                searchPaginationData[websiteName].results = [...searchPaginationData[websiteName].results, ...data.results];
+                
+                data.results.forEach(item => {
+                    const itemHtml = `
+                        <div class="carousel-item-wrapper">
+                            <div class="carousel-item new-item" data-title="${escapeHtml(item.title)}" data-link="${escapeHtml(item.link)}" data-image="${escapeHtml(item.image || '')}" data-language="${escapeHtml(item.language || '')}" data-genre="${escapeHtml(item.genre || '')}" data-website="${escapeHtml(websiteName)}">
+                                ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}" class="result-image lazy-image" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22280%22%3E%3Crect fill=%22%23ddd%22 width=%22200%22 height=%22280%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3ENo Image%3C/text%3E%3C/svg%3E'">` : '<div class="result-image"></div>'}
+                            </div>
+                            <div class="carousel-item-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div>
+                        </div>
+                    `;
+                    carousel.insertAdjacentHTML('beforeend', itemHtml);
+                });
+                
+                if (data.hasMore) {
+                    const randomImage = data.results.length > 0 ? data.results[Math.floor(Math.random() * data.results.length)].image : '';
+                    const nextCardHtml = `
+                        <div class="carousel-item-wrapper">
+                            <div class="trending-next-card" id="search-next-${websiteName}" data-website="${escapeHtml(websiteName)}" style="background-image: url('${escapeHtml(randomImage)}');">
+                                <span class="trending-next-card-text">Next</span>
+                            </div>
+                        </div>
+                    `;
+                    carousel.insertAdjacentHTML('beforeend', nextCardHtml);
+                }
+                
+                setTimeout(() => {
+                    carousel.scrollTo({
+                        left: scrollTarget,
+                        behavior: 'smooth'
+                    });
+                }, 100);
+                
+                setTimeout(() => {
+                    const newItems = carousel.querySelectorAll('.new-item');
+                    newItems.forEach(item => item.classList.remove('new-item'));
+                }, 1800);
+                
+                requestAnimationFrame(() => {
+                    initializeMovieCardClicks();
+                });
+                
+                initializeLazyImages();
+            }
+        } catch (error) {
+            const skeletons = carousel.querySelectorAll('.loading-skeleton');
+            skeletons.forEach(skeleton => skeleton.remove());
+            
+            if (searchPaginationData[websiteName].hasMore) {
+                const allResults = searchPaginationData[websiteName].results;
+                const randomImage = allResults.length > 0 ? allResults[Math.floor(Math.random() * allResults.length)].image : '';
+                const nextCardHtml = `
+                    <div class="carousel-item-wrapper">
+                        <div class="trending-next-card" id="search-next-${websiteName}" data-website="${escapeHtml(websiteName)}" style="background-image: url('${escapeHtml(randomImage)}');">
+                            <span class="trending-next-card-text">Next</span>
+                        </div>
+                    </div>
+                `;
+                carousel.insertAdjacentHTML('beforeend', nextCardHtml);
+            }
         }
     }
 
@@ -2638,7 +2782,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const headerHTML = `
                     <div class="website-header">
                         <span class="website-name">${escapeHtml(website.website)}</span>
-                        <span class="result-count">${website.count} results</span>
+                        <a href="search-results.php?query=${encodeURIComponent(currentSearchQuery)}&website=${encodeURIComponent(website.website)}" class="more-btn" aria-label="See All ${escapeHtml(website.website)} results">
+                            See All<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                            </svg>
+                        </a>
                     </div>
                 `;
 
@@ -3568,6 +3716,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         item.style.backgroundImage = `url(${poster})`;
                         item.style.backgroundSize = 'cover';
                         item.style.backgroundPosition = 'center';
+                        item.classList.add('has-poster');
+                        
+                        extractDominantColor(poster).then(color => {
+                            item.style.setProperty('--category-shadow-color', `${color.r}, ${color.g}, ${color.b}`);
+                        }).catch(() => {
+                            item.style.setProperty('--category-shadow-color', '0, 0, 0');
+                        });
                     }
                 });
             }
@@ -4171,5 +4326,110 @@ document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('DOMContentLoaded', addLogoClickListeners);
     } else {
         addLogoClickListeners();
+    }
+})();
+
+// Visibility-Based Skeleton Animation
+// Only animate skeleton elements that are visible in viewport (like SonyLIV)
+(function() {
+    let skeletonObserver = null;
+    const supportsIntersectionObserver = 'IntersectionObserver' in window;
+    
+    function addVisibleClassToAll() {
+        const skeletonItems = document.querySelectorAll('.skeleton-item, .hero-carousel-skeleton, .skeleton-carousel');
+        skeletonItems.forEach(item => {
+            item.classList.add('skeleton-visible');
+        });
+    }
+    
+    function initSkeletonObserver() {
+        if (!supportsIntersectionObserver) {
+            addVisibleClassToAll();
+            return;
+        }
+        
+        if (skeletonObserver) return;
+        
+        const observerOptions = {
+            root: null,
+            rootMargin: '100px',
+            threshold: 0.1
+        };
+        
+        skeletonObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('skeleton-visible');
+                    skeletonObserver.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+        
+        observeSkeletons();
+    }
+    
+    function observeSkeletons() {
+        if (!supportsIntersectionObserver) {
+            addVisibleClassToAll();
+            return;
+        }
+        
+        if (!skeletonObserver) return;
+        
+        const skeletonItems = document.querySelectorAll('.skeleton-item, .hero-carousel-skeleton, .skeleton-carousel');
+        
+        skeletonItems.forEach(item => {
+            if (!item.hasAttribute('data-skeleton-observed')) {
+                skeletonObserver.observe(item);
+                item.setAttribute('data-skeleton-observed', 'true');
+            }
+        });
+    }
+    
+    window.observeNewSkeletons = observeSkeletons;
+    
+    function initMutationObserver() {
+        if (!supportsIntersectionObserver) return;
+        
+        const mutationObserver = new MutationObserver((mutations) => {
+            let hasNewSkeletons = false;
+            
+            mutations.forEach(mutation => {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === 1) {
+                        if (node.classList && (node.classList.contains('skeleton-item') || 
+                            node.classList.contains('hero-carousel-skeleton') ||
+                            node.classList.contains('skeleton-carousel'))) {
+                            hasNewSkeletons = true;
+                        }
+                        if (node.querySelectorAll) {
+                            const nestedSkeletons = node.querySelectorAll('.skeleton-item, .hero-carousel-skeleton, .skeleton-carousel');
+                            if (nestedSkeletons.length > 0) {
+                                hasNewSkeletons = true;
+                            }
+                        }
+                    }
+                });
+            });
+            
+            if (hasNewSkeletons) {
+                observeSkeletons();
+            }
+        });
+        
+        mutationObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            initSkeletonObserver();
+            initMutationObserver();
+        });
+    } else {
+        initSkeletonObserver();
+        initMutationObserver();
     }
 })();

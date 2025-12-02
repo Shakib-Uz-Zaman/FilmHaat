@@ -4,6 +4,13 @@
 FilmHaat is a PHP-based web application designed to aggregate movie search results from multiple websites into a single, user-friendly interface. Its primary purpose is to simplify movie discovery by allowing users to search across various sources simultaneously. The project aims to provide a centralized platform for finding movies, inspired by streaming service UIs, with a fully dynamic section and category system that can be configured without touching code. The business vision is to become a go-to platform for movie enthusiasts seeking a consolidated view of available titles across multiple sources.
 
 ## Recent Changes
+- **2025-11-30**: Implemented search results pagination with infinite scroll:
+  - Backend: Added `page` parameter support to `search-single.php` for all search types (HTML scraping, Typesense API, generic API)
+  - Backend: Returns `hasMore` flag and `page` number to indicate if more results are available
+  - Frontend: Search results now show first 10 results with a "Next" card at the end (styled like trending-next-card)
+  - Frontend: Clicking Next loads the next page of results with smooth sliding animation and gradient border animation on new items
+  - Frontend: Skeleton loading animation displayed while fetching more results
+  - This allows users to browse all available search results instead of being limited to 10
 - **2025-11-09**: Updated horizontal card layout gradient background for improved visual consistency:
   - Changed `.category-grid-item` background gradient from `rgba(26,26,26,0)` to `#101010` → now `transparent` to `#1a1a1a`
   - Applied same gradient to both normal and hover states for consistent appearance
@@ -36,7 +43,7 @@ FilmHaat is a PHP-based web application designed to aggregate movie search resul
 ## User Preferences
 I want to emphasize a few key preferences for how the agent should interact with this project:
 - No changes to `config.php` unless explicitly requested: This file is central to the application's external integrations, and I want to maintain strict control over its contents.
-- Prioritize UI/UX consistency: When implementing new features or making modifications, ensure the Netflix-inspired dark theme, color palette, and layout are maintained.
+- Prioritize UI/UX consistency: When implementing new features or making modifications, ensure the dark theme, color palette, and layout are maintained.
 - Focus on performance: Any new features or modifications should consider performance implications, especially regarding data loading and rendering. Lazy loading and efficient data handling are crucial.
 - Detailed explanations for complex changes: If a proposed change involves significant architectural modifications or new design patterns, please provide a detailed explanation of the rationale and impact before implementation.
 - Iterative development: I prefer a step-by-step approach for larger features, allowing for review and feedback at each stage.
@@ -45,7 +52,7 @@ I want to emphasize a few key preferences for how the agent should interact with
 The application uses a vanilla PHP backend and vanilla JavaScript/CSS frontend.
 
 ### UI/UX Decisions
-- **Design Style**: Netflix-inspired dark theme with a primary Netflix Red accent, Background Black, and White & Light Gray text.
+- **Design Style**: Dark theme with a primary Red accent, Background Black, and White & Light Gray text.
 - **Layout**: Prominent hero section with a large search bar, a fixed navigation bar with scroll effects, and a responsive grid for results.
 - **Hero Carousel**: Full-width, auto-rotating carousel for trending movies with dynamic image-based shadow effects, touch/swipe/keyboard navigation, and responsive aspect ratios. Falls back to an animated vector illustration when carousel data is unavailable or hidden.
 - **Search Placeholder**: Animated search placeholder displaying rotating trending movie titles.
@@ -54,7 +61,7 @@ The application uses a vanilla PHP backend and vanilla JavaScript/CSS frontend.
 - **Search Popup Modal**: Modal for search functionality with fade transitions and keyboard/click-outside-to-close support.
 - **Dynamic Section Ordering**: Sections on the main page are dynamically ordered based on `config.php` configurations.
 - **Modal Metadata Display**: Movie modals display Language, Genre, and IMDb Rating above the title with styled badges.
-- **Weekly Top 10**: Dedicated section for most-viewed movies/series with Netflix-style large numbering, using localStorage for client-side tracking.
+- **Weekly Top 10**: Dedicated section for most-viewed movies/series with large numbering, using localStorage for client-side tracking.
 - **Responsive Navigation System**: Fixed bottom navigation bar for mobile with gradient accents and blur; header navigation for desktop with hover effects and active states.
 
 ### Technical Implementations

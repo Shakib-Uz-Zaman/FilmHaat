@@ -31,8 +31,6 @@
             width: calc(100% - 30px) !important;
             max-width: calc(100% - 20px) !important;
             background: rgba(26, 26, 26, 0.85);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
             display: flex;
             justify-content: space-around;
             align-items: stretch;
@@ -67,7 +65,6 @@
             height: 41px;
             min-height: 41px;
             max-height: 41px;
-            will-change: flex-direction, gap, padding;
             backface-visibility: hidden;
             -webkit-backface-visibility: hidden;
             -webkit-font-smoothing: antialiased;
@@ -84,7 +81,6 @@
             transform-origin: center;
             transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
                         color 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            will-change: transform;
             backface-visibility: hidden;
             -webkit-backface-visibility: hidden;
         }
@@ -99,7 +95,6 @@
             display: inline-block;
             text-align: center;
             line-height: 1;
-            will-change: transform;
             backface-visibility: hidden;
             -webkit-backface-visibility: hidden;
             letter-spacing: -0.005em;

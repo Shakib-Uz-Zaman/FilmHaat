@@ -5,12 +5,18 @@ require_once 'config.php';
 
 $websites = $SEARCH_WEBSITES;
 
-function searchWebsite($websiteName, $website, $query) {
+function searchWebsite($websiteName, $website, $query, $page = 1) {
     if (isset($website['type']) && $website['type'] === 'api') {
-        return searchAPI($websiteName, $website, $query);
+        return searchAPI($websiteName, $website, $query, $page);
     }
     
     $searchUrl = $website['url'] . '?' . $website['search_param'] . '=' . urlencode($query);
+    
+    if ($page > 1 && isset($website['page_param'])) {
+        $searchUrl .= '&' . $website['page_param'] . '=' . $page;
+    } elseif ($page > 1) {
+        $searchUrl .= '&page=' . $page;
+    }
     
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $searchUrl);
@@ -36,18 +42,21 @@ function searchWebsite($websiteName, $website, $query) {
     }
     
     $results = parseSearchResults($html, $website, $websiteName);
+    $hasMore = count($results) >= 10;
     
     return [
         'success' => true,
         'website' => $websiteName,
         'url' => $searchUrl,
         'results' => $results,
-        'count' => count($results)
+        'count' => count($results),
+        'page' => $page,
+        'hasMore' => $hasMore
     ];
 }
 
-function searchTypesenseAPI($websiteName, $website, $query) {
-    $apiUrl = $website['api_url'] . '?q=' . urlencode($query) . '&query_by=post_title&sort_by=sort_by_date:desc&limit=10&highlight_fields=none&use_cache=true&page=1';
+function searchTypesenseAPI($websiteName, $website, $query, $page = 1) {
+    $apiUrl = $website['api_url'] . '?q=' . urlencode($query) . '&query_by=post_title&sort_by=sort_by_date:desc&limit=10&highlight_fields=none&use_cache=true&page=' . $page;
     
     $refererUrl = isset($website['referer']) ? $website['referer'] : $website['url'];
     
@@ -122,23 +131,29 @@ function searchTypesenseAPI($websiteName, $website, $query) {
         }
     }
     
+    $totalFound = isset($data['found']) ? $data['found'] : 0;
+    $hasMore = ($page * 10) < $totalFound;
+    
     return [
         'success' => true,
         'website' => $websiteName,
         'url' => $apiUrl,
         'results' => $results,
-        'count' => count($results)
+        'count' => count($results),
+        'page' => $page,
+        'hasMore' => $hasMore,
+        'totalFound' => $totalFound
     ];
 }
 
-function searchAPI($websiteName, $website, $query) {
+function searchAPI($websiteName, $website, $query, $page = 1) {
     $parserType = isset($website['parser_type']) ? $website['parser_type'] : 'api';
     
     if ($parserType === 'typesense') {
-        return searchTypesenseAPI($websiteName, $website, $query);
+        return searchTypesenseAPI($websiteName, $website, $query, $page);
     }
     
-    $apiUrl = $website['api_url'] . '?query_term=' . urlencode($query) . '&limit=10';
+    $apiUrl = $website['api_url'] . '?query_term=' . urlencode($query) . '&limit=10&page=' . $page;
     
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $apiUrl);
@@ -166,6 +181,7 @@ function searchAPI($websiteName, $website, $query) {
     $data = json_decode($response, true);
     $results = [];
     
+    $totalMovies = 0;
     if (isset($data['data']['movies']) && is_array($data['data']['movies'])) {
         foreach ($data['data']['movies'] as $movie) {
             $language = isset($movie['language']) ? $movie['language'] : '';
@@ -181,14 +197,20 @@ function searchAPI($websiteName, $website, $query) {
                 'imdb' => $imdb
             ];
         }
+        $totalMovies = isset($data['data']['movie_count']) ? $data['data']['movie_count'] : count($data['data']['movies']);
     }
+    
+    $hasMore = ($page * 10) < $totalMovies;
     
     return [
         'success' => true,
         'website' => $websiteName,
         'url' => $apiUrl,
         'results' => $results,
-        'count' => count($results)
+        'count' => count($results),
+        'page' => $page,
+        'hasMore' => $hasMore,
+        'totalFound' => $totalMovies
     ];
 }
 
@@ -383,6 +405,7 @@ function parseSearchResults($html, $website, $websiteName) {
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['query']) && isset($_GET['website'])) {
     $query = trim($_GET['query']);
     $websiteName = trim($_GET['website']);
+    $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
     
     if (empty($query)) {
         echo json_encode([
@@ -400,7 +423,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['query']) && isset($_GET
         exit;
     }
     
-    $result = searchWebsite($websiteName, $websites[$websiteName], $query);
+    $result = searchWebsite($websiteName, $websites[$websiteName], $query, $page);
     echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 } else {
     echo json_encode([

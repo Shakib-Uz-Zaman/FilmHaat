@@ -28,8 +28,6 @@ $displayName = "Loved Movies";
             width: calc(100% - 30px) !important;
             max-width: calc(100% - 20px) !important;
             background: rgba(26, 26, 26, 0.85);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
             display: flex;
             justify-content: space-around;
             align-items: stretch;
@@ -254,17 +252,13 @@ $displayName = "Loved Movies";
             align-items: center;
             padding: 0 20px;
             background: transparent !important;
-            backdrop-filter: blur(0px) !important;
-            -webkit-backdrop-filter: blur(0px) !important;
-            transition: background 0.3s ease, backdrop-filter 0.3s ease;
-            will-change: background, backdrop-filter;
+            transition: background 0.3s ease;
+            will-change: background;
             z-index: 999;
         }
         
         .category-header-nav.scrolled {
             background: rgba(15, 15, 15, 0.95) !important;
-            backdrop-filter: blur(10px) !important;
-            -webkit-backdrop-filter: blur(10px) !important;
         }
         
         .category-page-header.empty-state-header .category-header-nav {
@@ -280,8 +274,6 @@ $displayName = "Loved Movies";
             justify-content: space-between;
             align-items: center;
             background: rgba(15, 15, 15, 0.95) !important;
-            backdrop-filter: blur(10px) !important;
-            -webkit-backdrop-filter: blur(10px) !important;
         }
         
         .category-page-header.empty-state-header .category-nav-title {

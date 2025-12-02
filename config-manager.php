@@ -56,8 +56,6 @@ $config = getCurrentConfig();
             padding: 10px 15px;
             z-index: 1000;
             background-color: #0f0f0f;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
             margin: 0;
         }
 
@@ -209,8 +207,6 @@ $config = getCurrentConfig();
             transform: translateY(-50%);
             height: 52px;
             background: rgba(15, 15, 15, 0.7);
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
             width: 45px;
@@ -793,7 +789,6 @@ $config = getCurrentConfig();
             width: 100%;
             height: 100%;
             background: rgba(15,15,15,0.4);
-            backdrop-filter: blur(4px);
             z-index: 1000;
             justify-content: center;
             align-items: center;

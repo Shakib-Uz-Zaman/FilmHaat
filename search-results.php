@@ -1,20 +1,20 @@
 <?php 
 require_once 'config.php';
 
-// Get category from URL parameter
-$category = isset($_GET['category']) ? strtoupper($_GET['category']) : '';
+$query = isset($_GET['query']) ? trim($_GET['query']) : '';
+$websiteName = isset($_GET['website']) ? trim($_GET['website']) : '';
 
-// Validate category exists
-$allCategories = array_merge($ALL_SECTION_WEBSITES, $CATEGORIES_WEBSITES);
-if (empty($category) || !isset($allCategories[$category])) {
+if (empty($query) || empty($websiteName)) {
     echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=/"></head><body><script>window.location.href="/";</script></body></html>';
     exit;
 }
 
-// Get category display name
-$categoryData = $allCategories[$category];
-$displayName = isset($categoryData['display_name']) ? $categoryData['display_name'] : ucfirst(strtolower($category));
-$categoryLower = strtolower($category);
+if (!isset($SEARCH_WEBSITES[$websiteName])) {
+    echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=/"></head><body><script>window.location.href="/";</script></body></html>';
+    exit;
+}
+
+$displayName = "\"" . htmlspecialchars($query) . "\" - " . htmlspecialchars($websiteName);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -25,8 +25,8 @@ $categoryLower = strtolower($category);
     <meta name="theme-color" content="#0f0f0f" id="themeColor">
     <link rel="icon" type="image/webp" href="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>">
     <link rel="apple-touch-icon" href="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>">
-    <title><?php echo htmlspecialchars($displayName); ?> - <?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></title>
-    <meta name="description" content="Browse <?php echo htmlspecialchars($displayName); ?> movies and TV shows from multiple websites. Discover content by category - completely free with no sign-up or subscription required.">
+    <title><?php echo $displayName; ?> - <?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></title>
+    <meta name="description" content="Search results for <?php echo htmlspecialchars($query); ?> on <?php echo htmlspecialchars($websiteName); ?>">
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.json">
     <script>
@@ -35,9 +35,10 @@ $categoryLower = strtolower($category);
             logo_image: <?php echo json_encode($SITE_SETTINGS['logo_image']); ?>,
             background_image: <?php echo json_encode($SITE_SETTINGS['background_image']); ?>
         };
+        window.SEARCH_QUERY = <?php echo json_encode($query); ?>;
+        window.WEBSITE_NAME = <?php echo json_encode($websiteName); ?>;
     </script>
     <style>
-        /* Reset body/html margins for proper fixed header overlay */
         html, body {
             margin: 0 !important;
             padding: 0 !important;
@@ -81,7 +82,6 @@ $categoryLower = strtolower($category);
             z-index: 2;
         }
         
-        
         .category-page-title {
             font-size: 2rem;
             font-weight: 700;
@@ -119,6 +119,7 @@ $categoryLower = strtolower($category);
             text-decoration: none;
             border: none;
             transition: all 0.3s ease;
+            cursor: pointer;
         }
         
         .back-button svg {
@@ -152,7 +153,6 @@ $categoryLower = strtolower($category);
             height: 26px;
         }
         
-        /* Fixed Header Nav */
         .category-header-nav {
             position: fixed;
             top: 0;
@@ -173,7 +173,6 @@ $categoryLower = strtolower($category);
             background: rgba(15, 15, 15, 0.95) !important;
         }
         
-        /* Title in navbar when scrolled */
         .category-nav-title {
             position: absolute;
             left: 80px;
@@ -189,6 +188,7 @@ $categoryLower = strtolower($category);
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.3s ease;
+            max-width: calc(100% - 160px);
         }
         
         .category-header-nav.scrolled .category-nav-title {
@@ -218,6 +218,7 @@ $categoryLower = strtolower($category);
             .category-nav-title {
                 left: 65px;
                 font-size: 1.2rem;
+                max-width: calc(100% - 130px);
             }
         }
         
@@ -274,21 +275,20 @@ $categoryLower = strtolower($category);
     <main>
     <div class="category-page-header" id="categoryPageHeader">
         <div class="category-header-nav" id="categoryHeaderNav">
-            <button onclick="history.back()" class="back-button">
+            <button onclick="history.back()" class="back-button" aria-label="Go back">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                     <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                 </svg>
             </button>
-            <h2 class="category-nav-title"><?php echo htmlspecialchars($displayName); ?></h2>
-            <button class="header-menu-button" id="headerSearchButton">
+            <h2 class="category-nav-title"><?php echo $displayName; ?></h2>
+            <button class="header-menu-button" id="headerSearchButton" aria-label="Search">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                     <circle cx="11" cy="11" r="7"/>
                     <path d="M21 21l-4.35-4.35"/>
                 </svg>
             </button>
         </div>
-        <h1 class="category-page-title"><?php echo htmlspecialchars($displayName); ?></h1>
-        <p class="category-page-subtitle">Browse all <?php echo htmlspecialchars($displayName); ?> movies and series</p>
+        <h1 class="category-page-title"><?php echo $displayName; ?></h1>
     </div>
 
     <div id="searchPopupModal" class="search-popup-modal" style="display: none;">
@@ -332,11 +332,11 @@ $categoryLower = strtolower($category);
                                             $visibleSearchWebsites = array_filter($SEARCH_WEBSITES, function($website) {
                                                 return !isset($website['hidden']) || $website['hidden'] !== true;
                                             });
-                                            foreach ($visibleSearchWebsites as $websiteName => $website): 
+                                            foreach ($visibleSearchWebsites as $wsName => $website): 
                                             ?>
                                             <label class="filter-option">
-                                                <input type="checkbox" class="filter-checkbox" value="<?php echo htmlspecialchars($websiteName); ?>" checked>
-                                                <span><?php echo htmlspecialchars($websiteName); ?></span>
+                                                <input type="checkbox" class="filter-checkbox" value="<?php echo htmlspecialchars($wsName); ?>" checked>
+                                                <span><?php echo htmlspecialchars($wsName); ?></span>
                                             </label>
                                             <?php endforeach; ?>
                                         </div>
@@ -401,7 +401,6 @@ $categoryLower = strtolower($category);
     </div>
 
     <div class="category-page-content">
-
         <div id="categoryPageGrid" class="category-page-grid">
             <?php for ($i = 1; $i <= 16; $i++): ?>
             <div class="category-grid-item skeleton-item">
@@ -413,7 +412,6 @@ $categoryLower = strtolower($category);
                         <div class="category-skeleton-tag"></div>
                     </div>
                 </div>
-                <div class="category-movie-index"><?php echo str_pad($i, 2, '0', STR_PAD_LEFT); ?></div>
             </div>
             <?php endfor; ?>
         </div>
@@ -421,7 +419,7 @@ $categoryLower = strtolower($category);
 
     <div id="movieModal" class="movie-modal" style="display: none;">
         <div class="modal-wrapper">
-            <button class="close-modal">&times;</button>
+            <button class="close-modal" aria-label="Close modal">&times;</button>
             <div class="modal-content">
                 <div class="modal-image-wrapper">
                     <img id="modalImage" src="" alt="" class="modal-image lazy-modal-image">
@@ -453,46 +451,36 @@ $categoryLower = strtolower($category);
     </main>
 
     <script>
-        const CATEGORY = '<?php echo $categoryLower; ?>';
-        const CATEGORY_DISPLAY = '<?php echo htmlspecialchars($displayName); ?>';
-        let currentPage = 1;
-        let isLoading = false;
-        let hasMoreMovies = true;
-        let allMovies = [];
-        let headerOriginalThemeColor = '#0f0f0f';
-
-        // Fixed Header Scroll Logic
+    document.addEventListener('DOMContentLoaded', function() {
         const categoryHeaderNav = document.getElementById('categoryHeaderNav');
         const categoryPageHeader = document.getElementById('categoryPageHeader');
         const categoryPageTitle = document.querySelector('.category-page-title');
-        let pageInitialized = false;
         
-        // Ensure page starts at top to prevent initial scrolled state
-        if ('scrollRestoration' in history) {
-            history.scrollRestoration = 'manual';
-        }
+        let currentPage = 1;
+        let isLoading = false;
+        let hasMoreResults = true;
+        let allResults = [];
+        let headerOriginalThemeColor = '#0f0f0f';
         
-        // Force remove scrolled class initially
-        if (categoryHeaderNav) {
-            categoryHeaderNav.classList.remove('scrolled');
-        }
-        
-        // Scroll to top immediately
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-        window.scrollTo(0, 0);
-        
-        function handleHeaderScroll() {
-            // Don't apply scroll logic until page is fully initialized
-            if (!pageInitialized) return;
-            
+        function handleScroll() {
             const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
             const headerHeight = categoryPageHeader ? categoryPageHeader.offsetHeight : 300;
-            const navHeight = 60; // Fixed navbar height
-            const threshold = headerHeight - navHeight - 20; // Show sticky title only after main header is out of view
+            const navHeight = 60;
+            const threshold = headerHeight - navHeight - 20;
             const themeColorMeta = document.getElementById('themeColor');
             
-            // Fade out the main title as we scroll
+            if (scrollTop >= threshold) {
+                categoryHeaderNav.classList.add('scrolled');
+                if (themeColorMeta) {
+                    themeColorMeta.setAttribute('content', '#0f0f0f');
+                }
+            } else {
+                categoryHeaderNav.classList.remove('scrolled');
+                if (themeColorMeta) {
+                    themeColorMeta.setAttribute('content', headerOriginalThemeColor);
+                }
+            }
+            
             if (categoryPageTitle) {
                 const fadeStart = headerHeight * 0.5;
                 const fadeEnd = headerHeight - navHeight - 20;
@@ -505,67 +493,19 @@ $categoryLower = strtolower($category);
                     categoryPageTitle.style.opacity = String(1 - fadeProgress);
                 }
             }
-            
-            if (scrollTop > threshold) {
-                categoryHeaderNav.classList.add('scrolled');
-                if (themeColorMeta) {
-                    themeColorMeta.setAttribute('content', '#0f0f0f');
-                }
-            } else {
-                categoryHeaderNav.classList.remove('scrolled');
-                if (themeColorMeta) {
-                    themeColorMeta.setAttribute('content', headerOriginalThemeColor);
-                }
-            }
         }
         
-        // Add scroll event listener with RAF for smooth performance
-        let scrollTimeout;
-        window.addEventListener('scroll', function() {
-            if (scrollTimeout) {
-                window.cancelAnimationFrame(scrollTimeout);
-            }
-            scrollTimeout = window.requestAnimationFrame(function() {
-                handleHeaderScroll();
-            });
-        });
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        handleScroll();
         
-        // Initialize page after short delay to ensure everything is loaded
-        setTimeout(function() {
-            pageInitialized = true;
-            handleHeaderScroll();
-        }, 100);
-        
-        // Connect header search button to search popup
-        const headerSearchButton = document.getElementById('headerSearchButton');
-        if (headerSearchButton) {
-            headerSearchButton.addEventListener('click', function() {
-                const searchPopup = document.getElementById('searchPopupModal');
-                if (searchPopup) {
-                    searchPopup.style.display = 'block';
-                    document.body.style.overflow = 'hidden';
-                    const searchInput = document.getElementById('searchInput');
-                    if (searchInput) {
-                        setTimeout(() => searchInput.focus(), 100);
-                    }
-                    
-                    // Load recent viewed movies
-                    if (typeof loadRecentViewedMovies === 'function') {
-                        loadRecentViewedMovies();
-                    }
-                }
-            });
-        }
-
-        // Movie modal functions
         const movieModal = document.getElementById('movieModal');
-        const closeModalBtn = document.querySelector('.close-modal');
         const modalImage = document.getElementById('modalImage');
         const modalTitle = document.getElementById('modalTitle');
         const modalLink = document.getElementById('modalLink');
         const modalLanguage = document.getElementById('modalLanguage');
         const modalWebsite = document.getElementById('modalWebsite');
-        
+        const closeModalBtn = document.querySelector('.close-modal');
+        const modalLovedBtn = document.getElementById('modalLovedBtn');
         
         function rgbToHex(r, g, b) {
             return '#' + [r, g, b].map(x => {
@@ -617,64 +557,89 @@ $categoryLower = strtolower($category);
             });
         }
         
-        function openMovieModal(item) {
-            const title = item.getAttribute('data-title');
-            const link = item.getAttribute('data-link');
-            const image = item.getAttribute('data-image');
-            const language = item.getAttribute('data-language');
-            const genre = item.getAttribute('data-genre') || '';
-            const website = item.getAttribute('data-website') || '';
-            
-            // Save to recent viewed
-            if (typeof saveToRecentViewed === 'function') {
-                saveToRecentViewed(title, link, image, language, genre, website);
+        function isLoved(movieData) {
+            try {
+                const lovedMovies = JSON.parse(localStorage.getItem('lovedMovies') || '[]');
+                return lovedMovies.some(m => m.link === movieData.link);
+            } catch (e) {
+                return false;
             }
-            
-            modalTitle.textContent = title;
-            modalLink.href = link;
-            modalLanguage.textContent = language || '';
-            modalWebsite.textContent = website || '';
-            
-            // Update modalLovedBtn with current movie data and state
-            const modalLovedBtn = document.getElementById('modalLovedBtn');
-            if (modalLovedBtn) {
-                modalLovedBtn.setAttribute('data-title', title);
-                modalLovedBtn.setAttribute('data-link', link);
-                modalLovedBtn.setAttribute('data-image', image);
-                modalLovedBtn.setAttribute('data-language', language);
-                modalLovedBtn.setAttribute('data-genre', genre);
+        }
+        
+        function toggleLoved(movieData) {
+            try {
+                let lovedMovies = JSON.parse(localStorage.getItem('lovedMovies') || '[]');
+                const existingIndex = lovedMovies.findIndex(m => m.link === movieData.link);
                 
-                // Check if movie is already loved and update button state
-                let lovedMoviesData = [];
-                try {
-                    lovedMoviesData = JSON.parse(localStorage.getItem('lovedMoviesData') || '[]');
-                } catch (error) {
-                    console.warn('Could not read loved movies data');
+                if (existingIndex > -1) {
+                    lovedMovies.splice(existingIndex, 1);
+                } else {
+                    lovedMovies.unshift({
+                        title: movieData.title,
+                        link: movieData.link,
+                        image: movieData.image,
+                        language: movieData.language,
+                        website: movieData.website,
+                        addedAt: Date.now()
+                    });
                 }
                 
-                const isLoved = lovedMoviesData.some(movie => movie.title === title);
-                if (isLoved) {
+                localStorage.setItem('lovedMovies', JSON.stringify(lovedMovies));
+                return !isLoved(movieData);
+            } catch (e) {
+                return false;
+            }
+        }
+        
+        function updateLovedButton(movieData) {
+            if (modalLovedBtn) {
+                const loved = isLoved(movieData);
+                const heartPath = modalLovedBtn.querySelector('path');
+                if (loved) {
                     modalLovedBtn.classList.add('loved');
-                    modalLovedBtn.setAttribute('title', 'Remove from Loved');
+                    if (heartPath) {
+                        heartPath.setAttribute('fill', 'url(#heartGradient)');
+                        heartPath.setAttribute('stroke', 'none');
+                    }
                 } else {
                     modalLovedBtn.classList.remove('loved');
-                    modalLovedBtn.setAttribute('title', 'Add to Loved');
+                    if (heartPath) {
+                        heartPath.setAttribute('fill', 'none');
+                        heartPath.setAttribute('stroke', 'currentColor');
+                    }
                 }
             }
+        }
+        
+        function openMovieModal(movieData) {
+            if (!movieModal) return;
             
+            modalTitle.textContent = movieData.title || '';
+            modalLink.href = movieData.link || '#';
+            modalLanguage.textContent = movieData.language || '';
+            modalWebsite.textContent = movieData.website || window.WEBSITE_NAME || '';
+            
+            updateLovedButton(movieData);
+            
+            if (modalLovedBtn) {
+                modalLovedBtn.onclick = function() {
+                    toggleLoved(movieData);
+                    updateLovedButton(movieData);
+                };
+            }
+            
+            const image = movieData.image || '';
             if (image) {
+                modalImage.src = image;
+                modalImage.alt = movieData.title || '';
+                modalImage.style.display = 'block';
                 modalImage.classList.remove('loaded');
                 movieModal.querySelector('.modal-content').classList.remove('image-loaded');
-                
-                modalImage.src = image;
-                modalImage.style.display = 'block';
                 
                 extractDominantColor(image).then(color => {
                     movieModal.querySelector('.modal-content').style.setProperty('--modal-gradient-color-top', `rgba(${color.r}, ${color.g}, ${color.b}, 1)`);
                     movieModal.querySelector('.modal-content').style.setProperty('--modal-gradient-color-bottom', `rgba(${color.r}, ${color.g}, ${color.b}, 1)`);
-                }).catch(error => {
-                    console.warn('Failed to extract color for modal, using defaults:', error);
-                });
+                }).catch(() => {});
                 
                 if (modalImage.complete && modalImage.naturalHeight !== 0) {
                     modalImage.classList.add('loaded');
@@ -721,8 +686,7 @@ $categoryLower = strtolower($category);
                 closeMovieModal();
             }
         });
-
-        // Parse genres function
+        
         function parseGenres(genreString, languageString) {
             const genres = [];
             
@@ -748,15 +712,13 @@ $categoryLower = strtolower($category);
             
             return genres.slice(0, 4);
         }
-
-        // Escape HTML function
+        
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
         
-        // Initialize lazy images
         function initializeLazyImages() {
             const lazyImages = document.querySelectorAll('.lazy-image');
             
@@ -782,32 +744,99 @@ $categoryLower = strtolower($category);
             });
         }
         
-        // Load next card background
         function loadNextCardBackground() {
             const nextCard = document.getElementById('categoryNextCard');
-            if (nextCard && allMovies.length > 0) {
-                const randomMovie = allMovies[Math.floor(Math.random() * allMovies.length)];
-                if (randomMovie && randomMovie.image) {
-                    nextCard.style.backgroundImage = `url('${randomMovie.image}')`;
+            if (nextCard && allResults.length > 0) {
+                const randomResult = allResults[Math.floor(Math.random() * allResults.length)];
+                if (randomResult && randomResult.image) {
+                    nextCard.style.backgroundImage = `url('${randomResult.image}')`;
                 }
             }
         }
-
-        // Load category movies
-        async function loadCategoryMovies(page, append = false) {
-            if (isLoading) return Promise.resolve();
+        
+        function initializeClicks() {
+            document.querySelectorAll('.category-grid-item').forEach(item => {
+                if (item.classList.contains('skeleton-item')) return;
+                
+                item.addEventListener('click', function() {
+                    const movieData = {
+                        title: this.dataset.title,
+                        link: this.dataset.link,
+                        image: this.dataset.image,
+                        language: this.dataset.language,
+                        website: window.WEBSITE_NAME
+                    };
+                    openMovieModal(movieData);
+                });
+            });
+            
+            const nextCard = document.getElementById('categoryNextCard');
+            if (nextCard) {
+                nextCard.addEventListener('click', function() {
+                    if (!isLoading && hasMoreResults) {
+                        currentPage++;
+                        loadSearchResults(currentPage, true);
+                    }
+                });
+            }
+        }
+        
+        function displayResults(results) {
+            const categoryPageGrid = document.getElementById('categoryPageGrid');
+            categoryPageGrid.innerHTML = '';
+            
+            if (results.length === 0) {
+                categoryPageGrid.innerHTML = '<p style="text-align: center; color: rgba(255,255,255,0.7); padding: 60px 20px;">No results found for this search.</p>';
+                return;
+            }
+            
+            results.forEach((item, index) => {
+                const genres = parseGenres(item.genre, item.language);
+                const genreTags = genres.map(g => `<span class="category-genre-tag">${escapeHtml(g)}</span>`).join('');
+                
+                const itemHtml = `
+                    <div class="category-grid-item" 
+                         data-title="${escapeHtml(item.title)}" 
+                         data-link="${escapeHtml(item.link)}" 
+                         data-image="${escapeHtml(item.image || '')}" 
+                         data-language="${escapeHtml(item.language || '')}"
+                         style="cursor: pointer;">
+                        ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}" class="result-image lazy-image" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22280%22%3E%3Crect fill=%22%23ddd%22 width=%22200%22 height=%22280%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3ENo Image%3C/text%3E%3C/svg%3E'">` : '<div class="result-image"></div>'}
+                        <div class="category-movie-info">
+                            <h3 class="category-movie-title">${escapeHtml(item.title)}</h3>
+                            <div class="category-movie-genres">${genreTags}</div>
+                        </div>
+                    </div>
+                `;
+                categoryPageGrid.insertAdjacentHTML('beforeend', itemHtml);
+            });
+            
+            if (hasMoreResults) {
+                const nextCardHtml = `
+                    <div class="category-next-card" id="categoryNextCard">
+                        <span class="category-next-card-text">Load More</span>
+                    </div>
+                `;
+                categoryPageGrid.insertAdjacentHTML('beforeend', nextCardHtml);
+                loadNextCardBackground();
+            }
+            
+            initializeLazyImages();
+            initializeClicks();
+        }
+        
+        async function loadSearchResults(page, append = false) {
+            if (isLoading) return;
             
             isLoading = true;
             const categoryPageGrid = document.getElementById('categoryPageGrid');
             
-            // Add skeleton loaders when appending (load more)
             if (append) {
                 const nextCard = document.getElementById('categoryNextCard');
                 if (nextCard) {
                     nextCard.remove();
                 }
                 
-                // Add skeleton loaders
                 const skeletonCount = 8;
                 for (let i = 0; i < skeletonCount; i++) {
                     const skeletonHtml = `
@@ -820,7 +849,7 @@ $categoryLower = strtolower($category);
                                     <div class="category-skeleton-tag"></div>
                                 </div>
                             </div>
-                            <div class="category-movie-index">${String(allMovies.length + i + 1).padStart(2, '0')}</div>
+                            <div class="category-movie-index">${String(allResults.length + i + 1).padStart(2, '0')}</div>
                         </div>
                     `;
                     categoryPageGrid.insertAdjacentHTML('beforeend', skeletonHtml);
@@ -828,41 +857,37 @@ $categoryLower = strtolower($category);
             }
             
             try {
-                const response = await fetch(`category-data.php?category=${CATEGORY}&page=${page}`);
+                const response = await fetch(`search-single.php?query=${encodeURIComponent(window.SEARCH_QUERY)}&website=${encodeURIComponent(window.WEBSITE_NAME)}&page=${page}`);
                 const data = await response.json();
                 
-                // Always remove skeleton loaders first
                 if (append) {
                     const skeletons = categoryPageGrid.querySelectorAll('.loading-skeleton');
                     skeletons.forEach(skeleton => skeleton.remove());
                 }
                 
-                if (data.success && data.results.length > 0) {
+                if (data.success && data.results && data.results.length > 0) {
+                    hasMoreResults = data.hasMore || false;
+                    
                     if (append) {
-                        const currentCount = allMovies.length;
-                        allMovies = [...allMovies, ...data.results];
+                        const currentCount = allResults.length;
+                        allResults = [...allResults, ...data.results];
                         
-                        data.results.forEach((movie, index) => {
-                            const movieIndex = String(currentCount + index + 1).padStart(2, '0');
-                            const genres = parseGenres(movie.genre, movie.language);
+                        data.results.forEach((item, index) => {
+                            const genres = parseGenres(item.genre, item.language);
                             const genreTags = genres.map(g => `<span class="category-genre-tag">${escapeHtml(g)}</span>`).join('');
-                            
-                            const categoryTag = movie.category ? `<span class="category-genre-tag">${escapeHtml(movie.category)}</span>` : '';
-                            const websiteTag = movie.website ? `<span class="category-genre-tag category-website-tag">${escapeHtml(movie.website.toUpperCase())}</span>` : '';
                             
                             const itemHtml = `
                                 <div class="category-grid-item new-item" 
-                                     data-title="${escapeHtml(movie.title)}" 
-                                     data-link="${escapeHtml(movie.link)}" 
-                                     data-image="${escapeHtml(movie.image || '')}" 
-                                     data-language="${escapeHtml(movie.language || '')}"
+                                     data-title="${escapeHtml(item.title)}" 
+                                     data-link="${escapeHtml(item.link)}" 
+                                     data-image="${escapeHtml(item.image || '')}" 
+                                     data-language="${escapeHtml(item.language || '')}"
                                      style="cursor: pointer;">
-                                    ${movie.image ? `<img src="${escapeHtml(movie.image)}" alt="${escapeHtml(movie.title)}" class="result-image lazy-image" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22280%22%3E%3Crect fill=%22%23ddd%22 width=%22200%22 height=%22280%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3ENo Image%3C/text%3E%3C/svg%3E'">` : '<div class="result-image"></div>'}
+                                    ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}" class="result-image lazy-image" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22280%22%3E%3Crect fill=%22%23ddd%22 width=%22200%22 height=%22280%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3ENo Image%3C/text%3E%3C/svg%3E'">` : '<div class="result-image"></div>'}
                                     <div class="category-movie-info">
-                                        <h3 class="category-movie-title">${escapeHtml(movie.title)}</h3>
-                                        <div class="category-movie-genres">${genreTags}${categoryTag}${websiteTag}</div>
+                                        <h3 class="category-movie-title">${escapeHtml(item.title)}</h3>
+                                        <div class="category-movie-genres">${genreTags}</div>
                                     </div>
-                                    <div class="category-movie-index">${movieIndex}</div>
                                 </div>
                             `;
                             categoryPageGrid.insertAdjacentHTML('beforeend', itemHtml);
@@ -873,13 +898,11 @@ $categoryLower = strtolower($category);
                             newItems.forEach(item => item.classList.remove('new-item'));
                         }, 3000);
                     } else {
-                        allMovies = data.results;
-                        displayMovies(allMovies);
+                        allResults = data.results;
+                        displayResults(allResults);
                     }
                     
-                    hasMoreMovies = data.results.length >= 8;
-                    
-                    if (hasMoreMovies) {
+                    if (hasMoreResults) {
                         const existingNextCard = document.getElementById('categoryNextCard');
                         if (!existingNextCard) {
                             const nextCardHtml = `
@@ -891,10 +914,9 @@ $categoryLower = strtolower($category);
                             loadNextCardBackground();
                         }
                     } else if (append) {
-                        // Show "No more movies available" message
                         const noMoreHtml = `
                             <div style="text-align: center; color: rgba(255,255,255,0.5); padding: 40px 20px; grid-column: 1 / -1; font-size: 1.1rem;">
-                                No more movies available
+                                No more results available
                             </div>
                         `;
                         categoryPageGrid.insertAdjacentHTML('beforeend', noMoreHtml);
@@ -902,212 +924,54 @@ $categoryLower = strtolower($category);
                     
                     initializeLazyImages();
                     initializeClicks();
+                    
+                    if (!append && allResults.length > 0) {
+                        const firstImage = allResults[0].image;
+                        if (firstImage) {
+                            const header = document.getElementById('categoryPageHeader');
+                            const themeColorMeta = document.getElementById('themeColor');
+                            if (header) {
+                                header.style.backgroundImage = `url('${firstImage}')`;
+                                
+                                extractDominantColor(firstImage).then(color => {
+                                    header.style.setProperty('--gradient-color-top', `rgba(${color.r}, ${color.g}, ${color.b}, 1)`);
+                                    
+                                    const hexColor = rgbToHex(color.r, color.g, color.b);
+                                    headerOriginalThemeColor = hexColor;
+                                    
+                                    if (themeColorMeta) {
+                                        themeColorMeta.setAttribute('content', hexColor);
+                                    }
+                                }).catch(() => {});
+                            }
+                        }
+                    }
                 } else {
                     if (!append) {
-                        categoryPageGrid.innerHTML = '<p style="text-align: center; color: rgba(255,255,255,0.7); padding: 60px 20px;">No movies found in this category.</p>';
+                        categoryPageGrid.innerHTML = '<p style="text-align: center; color: rgba(255,255,255,0.7); padding: 60px 20px;">No results found for this search.</p>';
                     } else {
-                        // Show "No more movies available" message when no results
                         const noMoreHtml = `
                             <div style="text-align: center; color: rgba(255,255,255,0.5); padding: 40px 20px; grid-column: 1 / -1; font-size: 1.1rem;">
-                                No more movies available
+                                No more results available
                             </div>
                         `;
                         categoryPageGrid.insertAdjacentHTML('beforeend', noMoreHtml);
                     }
-                    hasMoreMovies = false;
+                    hasMoreResults = false;
                 }
             } catch (error) {
-                console.error('Error loading category movies:', error);
-                
-                // Always remove skeleton loaders on error
-                if (append) {
-                    const skeletons = categoryPageGrid.querySelectorAll('.loading-skeleton');
-                    skeletons.forEach(skeleton => skeleton.remove());
-                    
-                    // Re-add Load More button so user can retry
-                    const nextCardHtml = `
-                        <div class="category-next-card" id="categoryNextCard">
-                            <span class="category-next-card-text">Load More</span>
-                        </div>
-                    `;
-                    categoryPageGrid.insertAdjacentHTML('beforeend', nextCardHtml);
-                    loadNextCardBackground();
-                } else {
-                    categoryPageGrid.innerHTML = '<p style="text-align: center; color: rgba(255,255,255,0.7); padding: 60px 20px;">Failed to load movies. Please try again.</p>';
+                console.error('Error loading search results:', error);
+                if (!append) {
+                    categoryPageGrid.innerHTML = '<p style="text-align: center; color: rgba(255,255,255,0.7); padding: 60px 20px;">Error loading search results. Please try again.</p>';
                 }
-            } finally {
-                isLoading = false;
             }
             
-            return Promise.resolve();
-        }
-
-        // Display movies
-        function displayMovies(movies) {
-            const categoryPageGrid = document.getElementById('categoryPageGrid');
-            let html = '';
-            
-            movies.forEach((movie, index) => {
-                const movieIndex = String(index + 1).padStart(2, '0');
-                const genres = parseGenres(movie.genre, movie.language);
-                const genreTags = genres.map(g => `<span class="category-genre-tag">${escapeHtml(g)}</span>`).join('');
-                
-                const categoryTag = movie.category ? `<span class="category-genre-tag">${escapeHtml(movie.category)}</span>` : '';
-                const websiteTag = movie.website ? `<span class="category-genre-tag category-website-tag">${escapeHtml(movie.website.toUpperCase())}</span>` : '';
-                
-                html += `
-                    <div class="category-grid-item" 
-                         data-title="${escapeHtml(movie.title)}" 
-                         data-link="${escapeHtml(movie.link)}" 
-                         data-image="${escapeHtml(movie.image || '')}" 
-                         data-language="${escapeHtml(movie.language || '')}"
-                         style="cursor: pointer;">
-                        ${movie.image ? `<img src="${escapeHtml(movie.image)}" alt="${escapeHtml(movie.title)}" class="result-image lazy-image" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22280%22%3E%3Crect fill=%22%23ddd%22 width=%22200%22 height=%22280%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3ENo Image%3C/text%3E%3C/svg%3E'">` : '<div class="result-image"></div>'}
-                        <div class="category-movie-info">
-                            <h3 class="category-movie-title">${escapeHtml(movie.title)}</h3>
-                            <div class="category-movie-genres">${genreTags}${categoryTag}${websiteTag}</div>
-                        </div>
-                        <div class="category-movie-index">${movieIndex}</div>
-                    </div>
-                `;
-            });
-            
-            categoryPageGrid.innerHTML = html;
-            initializeLazyImages();
-            initializeClicks();
+            isLoading = false;
         }
         
-        // Initialize click events
-        function initializeClicks() {
-            const movieItems = document.querySelectorAll('.category-grid-item:not(#categoryNextCard):not([data-click-initialized])');
-            movieItems.forEach(item => {
-                item.setAttribute('data-click-initialized', 'true');
-                item.addEventListener('click', function() {
-                    openMovieModal(this);
-                });
-            });
-            
-            const nextCard = document.getElementById('categoryNextCard');
-            if (nextCard) {
-                nextCard.addEventListener('click', function() {
-                    if (hasMoreMovies && !isLoading) {
-                        currentPage++;
-                        loadCategoryMovies(currentPage, true);
-                    }
-                });
-            }
-        }
-
-        // Set header background from first movie
-        function setHeaderBackground() {
-            const categoryPageHeader = document.getElementById('categoryPageHeader');
-            const themeColorMeta = document.getElementById('themeColor');
-            
-            if (categoryPageHeader && allMovies.length > 0) {
-                const randomMovie = allMovies[Math.floor(Math.random() * Math.min(5, allMovies.length))];
-                if (randomMovie && randomMovie.image) {
-                    categoryPageHeader.style.backgroundImage = `url('${randomMovie.image}')`;
-                    
-                    // Extract dominant color for dynamic gradient and theme color
-                    extractDominantColor(randomMovie.image).then(color => {
-                        categoryPageHeader.style.setProperty('--gradient-color-top', `rgba(${color.r}, ${color.g}, ${color.b}, 1)`);
-                        
-                        // Update browser theme color
-                        if (themeColorMeta) {
-                            const hexColor = rgbToHex(color.r, color.g, color.b);
-                            headerOriginalThemeColor = hexColor;
-                            themeColorMeta.setAttribute('content', hexColor);
-                        }
-                    }).catch(error => {
-                        console.warn('Failed to extract color for category header, using default:', error);
-                    });
-                }
-            }
-        }
-        
-        // Load initial page
-        loadCategoryMovies(currentPage).then(() => {
-            setHeaderBackground();
-        });
-
-        // Search button functionality - open search popup
-        const headerSearchBtn = document.querySelector('.header-menu-button');
-        const searchPopupModal = document.getElementById('searchPopupModal');
-        const searchPopupClose = document.getElementById('searchPopupClose');
-        const searchInput = document.getElementById('searchInput');
-        let originalThemeColor = null;
-
-        function openSearchPopup() {
-            if (searchPopupModal) {
-                const themeColorMeta = document.getElementById('themeColor');
-                if (themeColorMeta) {
-                    originalThemeColor = themeColorMeta.getAttribute('content');
-                    themeColorMeta.setAttribute('content', '#0f0f0f');
-                }
-                
-                searchPopupModal.style.display = 'block';
-                setTimeout(() => {
-                    searchPopupModal.classList.add('show');
-                }, 10);
-                document.body.style.overflow = 'hidden';
-                if (searchInput) {
-                    setTimeout(() => {
-                        searchInput.focus();
-                    }, 300);
-                }
-            }
-        }
-
-        function closeSearchPopup() {
-            if (searchPopupModal) {
-                const themeColorMeta = document.getElementById('themeColor');
-                if (themeColorMeta && originalThemeColor) {
-                    themeColorMeta.setAttribute('content', originalThemeColor);
-                }
-                
-                searchPopupModal.classList.remove('show');
-                setTimeout(() => {
-                    searchPopupModal.style.display = 'none';
-                    document.body.style.overflow = 'auto';
-                }, 300);
-            }
-        }
-
-        if (headerSearchBtn) {
-            headerSearchBtn.addEventListener('click', openSearchPopup);
-        }
-
-        if (searchPopupClose) {
-            searchPopupClose.addEventListener('click', closeSearchPopup);
-        }
-
-        if (searchPopupModal) {
-            searchPopupModal.addEventListener('click', function(e) {
-                if (e.target === searchPopupModal) {
-                    closeSearchPopup();
-                }
-            });
-        }
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && searchPopupModal && searchPopupModal.classList.contains('show')) {
-                closeSearchPopup();
-            }
-        });
+        loadSearchResults(1);
+    });
     </script>
-    <script src="script.js" defer></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
-                        console.log('Service Worker registered successfully:', registration.scope);
-                    })
-                    .catch(error => {
-                        console.log('Service Worker registration failed:', error);
-                    });
-            });
-        }
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>

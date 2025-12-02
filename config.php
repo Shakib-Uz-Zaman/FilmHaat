@@ -169,11 +169,10 @@ $LATEST_WEBSITES = [
 
 $SEARCH_WEBSITES = [
     'MoviesGod' => [
-        'url' => 'https://a.moviesgod.live/',
+        'url' => 'https://moviesgod1.site/',
         'search_param' => 's',
         'type' => 'html',
         'parser_type' => 'default',
-        'hidden' => false,
     ],
     'HDHub4u' => [
         'url' => 'https://hdhub4u.rehab/',
