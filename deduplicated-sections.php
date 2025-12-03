@@ -26,6 +26,11 @@ function deduplicateSections($page = 1, $specificSection = null) {
     $sectionsConfig = [];
     
     foreach ($GLOBALS['ALL_SECTION_WEBSITES'] as $configKey => $websites) {
+        // Skip SEARCH_LINKS - it's a static built-in section that doesn't need fetching
+        if ($configKey === 'SEARCH_LINKS') {
+            continue;
+        }
+        
         $sectionKey = strtolower($configKey);
         
         if ($specificSection !== null && $sectionKey !== $specificSection) {

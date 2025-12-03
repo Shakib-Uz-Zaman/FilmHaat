@@ -14,7 +14,7 @@ $ALL_SECTION_WEBSITES = [
         'Dynamic' => [
             'url' => 'search_links',
             'parser_type' => 'search_links',
-            'hidden' => false,
+            'hidden' => true,
         ],
     ],
     'BOLLYWOOD' => [

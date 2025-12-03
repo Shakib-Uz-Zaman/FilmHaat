@@ -550,6 +550,60 @@
             if (!$hasVisibleWebsite) continue;
             
             $section = $sectionMapping[$configKey];
+            
+            if ($configKey === 'SEARCH_LINKS'):
+                $visibleSearchWebsites = array_filter($SEARCH_WEBSITES, function($website) {
+                    return !isset($website['hidden']) || $website['hidden'] !== true;
+                });
+                if (count($visibleSearchWebsites) > 0):
+    ?>
+    <div class="search-platforms-section" id="<?php echo $section['id']; ?>" style="display: block;">
+        <div class="section-header">
+            <h2 class="website-name">
+                <?php echo htmlspecialchars($section['name']); ?>
+            </h2>
+        </div>
+        <div class="search-platforms-carousel-container">
+            <button class="platform-carousel-btn platform-carousel-btn-prev" data-carousel="searchPlatformsActual" aria-label="Previous platforms">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                </svg>
+            </button>
+            <div class="search-platforms-wrapper">
+                <div class="search-platforms-grid" id="searchPlatformsGrid">
+                    <?php 
+                    $platformCount = count($visibleSearchWebsites);
+                    for ($i = 0; $i < $platformCount; $i++): ?>
+                    <div class="search-platform-card skeleton-item">
+                        <div class="skeleton-image search-platform-skeleton-icon"></div>
+                        <div class="search-platform-skeleton-name"></div>
+                    </div>
+                    <?php endfor; ?>
+                </div>
+                <div class="search-platforms-grid search-platforms-actual" id="searchPlatformsActual">
+                    <?php foreach ($visibleSearchWebsites as $websiteName => $websiteData): 
+                        $websiteUrl = $websiteData['url'];
+                        $parsedUrl = parse_url($websiteUrl);
+                        $domain = isset($parsedUrl['host']) ? $parsedUrl['host'] : $websiteUrl;
+                        $faviconUrl = 'https://www.google.com/s2/favicons?domain=' . urlencode($domain) . '&sz=64';
+                    ?>
+                    <a href="<?php echo htmlspecialchars($websiteUrl); ?>" target="_blank" rel="noopener noreferrer" class="search-platform-card">
+                        <img src="<?php echo htmlspecialchars($faviconUrl); ?>" alt="<?php echo htmlspecialchars($websiteName); ?>" class="search-platform-icon" loading="lazy" onerror="this.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22white%22%3E%3Ccircle cx=%2212%22 cy=%2212%22 r=%2210%22 fill=%22none%22/%3E%3Cpath d=%22M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z%22/%3E%3C/svg%3E'">
+                        <span class="search-platform-name"><?php echo htmlspecialchars($websiteName); ?></span>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <button class="platform-carousel-btn platform-carousel-btn-next" data-carousel="searchPlatformsActual" aria-label="Next platforms">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+    <?php 
+                endif;
+            else:
     ?>
     <div class="trending-section" id="<?php echo $section['id']; ?>" style="display: block;">
         <div class="section-header">
@@ -591,6 +645,7 @@
         </div>
     </div>
     <?php
+            endif;
         }
     }
     ?>

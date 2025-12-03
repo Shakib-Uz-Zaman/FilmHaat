@@ -1494,7 +1494,8 @@ $config = getCurrentConfig();
                     $displayName = isset($websites['display_name']) ? $websites['display_name'] : $section;
                     foreach($websites as $name => $details): 
                         if ($name === 'display_name') continue;
-                        $isBuiltIn = ($section === 'WEEKLY_TOP_10');
+                        $isBuiltIn = ($section === 'WEEKLY_TOP_10' || $section === 'SEARCH_LINKS');
+                        $isSearchLinks = ($section === 'SEARCH_LINKS');
                         $detailsWithDisplayName = array_merge($details, ['display_name' => $displayName]);
                         $isHidden = isset($details['hidden']) && $details['hidden'];
                 ?>
@@ -1517,7 +1518,7 @@ $config = getCurrentConfig();
                                     <span class="detail-value"><?php echo htmlspecialchars($details['parser_type']); ?></span>
                                 </div>
                             </div>
-                            <?php if ($isBuiltIn): ?>
+                            <?php if ($section === 'WEEKLY_TOP_10'): ?>
                             <div style="margin-top: 12px; padding: 12px; background: #fef3c7; border-left: 3px solid #f59e0b; border-radius: 6px;">
                                 <p style="color: #92400e; font-size: 13px; margin-bottom: 10px; line-height: 1.5;">
                                     <strong>Reset Weekly Views Data:</strong> You can reset all Weekly Top 10 view data using this button.
@@ -1525,6 +1526,13 @@ $config = getCurrentConfig();
                                 <button class="delete-btn" onclick="resetWeeklyViews()" style="padding: 8px 16px; font-size: 13px;">
                                     Reset Data
                                 </button>
+                            </div>
+                            <?php endif; ?>
+                            <?php if ($isSearchLinks): ?>
+                            <div style="margin-top: 12px; padding: 12px; background: #dbeafe; border-left: 3px solid #3b82f6; border-radius: 6px;">
+                                <p style="color: #1e40af; font-size: 13px; line-height: 1.5;">
+                                    <strong>Dynamic Section:</strong> This section automatically displays all search websites from the "Search Websites" tab. Add or remove websites there to update this section.
+                                </p>
                             </div>
                             <?php endif; ?>
                         </div>

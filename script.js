@@ -353,7 +353,6 @@ function getRelativeTime(timestamp) {
 }
 
 let currentThemeColor = '#0f0f0f';
-let targetThemeColor = '#0f0f0f';
 let isTransitioning = false;
 
 function handleScroll() {
@@ -438,7 +437,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
     const resultsContainer = document.getElementById('resultsContainer');
     const results = document.getElementById('results');
-    const loadingMessage = document.getElementById('loadingMessage');
     const errorMessage = document.getElementById('errorMessage');
     const animatedPlaceholder = document.getElementById('animatedPlaceholder');
     const placeholderText = animatedPlaceholder.querySelector('.placeholder-text');
@@ -594,19 +592,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const loadMoreHtml = `
                 <div class="category-next-card" id="recentViewedLoadMore">
                     <span class="category-next-card-text">Load More</span>
+                    <span class="category-next-card-arrow">❯</span>
                 </div>
             `;
             recentViewedGrid.innerHTML += loadMoreHtml;
             
             const loadMoreCard = document.getElementById('recentViewedLoadMore');
             if (loadMoreCard) {
-                if (recentViewedMovies.length > 0) {
-                    const randomMovie = recentViewedMovies[Math.floor(Math.random() * Math.min(recentViewedMovies.length, itemsToShow))];
-                    if (randomMovie && randomMovie.image) {
-                        loadMoreCard.style.backgroundImage = `url('${randomMovie.image}')`;
-                    }
-                }
-                
                 loadMoreCard.addEventListener('click', function() {
                     const currentItemCount = recentViewedGrid.querySelectorAll('.recent-viewed-item').length;
                     recentViewedShowingAll = true;
@@ -2185,15 +2177,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 const maxScroll = carousel.scrollWidth - carousel.clientWidth;
                 
                 if (scrollLeft <= 0) {
-                    prevBtn.style.display = 'none';
+                    prevBtn.style.opacity = '0';
+                    prevBtn.style.pointerEvents = 'none';
                 } else {
-                    prevBtn.style.display = 'flex';
+                    prevBtn.style.opacity = '';
+                    prevBtn.style.pointerEvents = 'auto';
                 }
                 
                 if (scrollLeft >= maxScroll - 1) {
-                    nextBtn.style.display = 'none';
+                    nextBtn.style.opacity = '0';
+                    nextBtn.style.pointerEvents = 'none';
                 } else {
-                    nextBtn.style.display = 'flex';
+                    nextBtn.style.opacity = '';
+                    nextBtn.style.pointerEvents = 'auto';
                 }
             }
             
@@ -2236,6 +2232,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success && data.sections) {
                 // Process all sections dynamically using generic display function
                 for (const [sectionKey, sectionData] of Object.entries(data.sections)) {
+                    // Skip SEARCH_LINKS - it's a static built-in section that doesn't need fetching
+                    if (sectionKey.toUpperCase() === 'SEARCH_LINKS') {
+                        continue;
+                    }
+                    
                     const sectionId = sectionKey + 'Section';
                     const section = document.getElementById(sectionId);
                     
@@ -2732,15 +2733,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const maxScroll = carousel.scrollWidth - carousel.clientWidth;
 
             if (scrollLeft <= 0) {
-                prevBtn.style.display = 'none';
+                prevBtn.style.opacity = '0';
+                prevBtn.style.pointerEvents = 'none';
             } else {
-                prevBtn.style.display = 'flex';
+                prevBtn.style.opacity = '';
+                prevBtn.style.pointerEvents = 'auto';
             }
 
             if (scrollLeft >= maxScroll - 1) {
-                nextBtn.style.display = 'none';
+                nextBtn.style.opacity = '0';
+                nextBtn.style.pointerEvents = 'none';
             } else {
-                nextBtn.style.display = 'flex';
+                nextBtn.style.opacity = '';
+                nextBtn.style.pointerEvents = 'auto';
             }
         }
 
@@ -2758,110 +2763,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function displayResults(data) {
-        results.innerHTML = '';
-        
-        let totalResults = 0;
-        data.results.forEach(website => {
-            if (website.success) {
-                totalResults += website.count;
-            }
-        });
-
-        if (totalResults === 0) {
-            results.innerHTML = '<div class="no-results">No results found. Try searching for something else.</div>';
-            showResults();
-            return;
-        }
-
-        data.results.forEach(website => {
-            const websiteDiv = document.createElement('div');
-            websiteDiv.className = 'website-results';
-
-            if (website.success) {
-                const headerHTML = `
-                    <div class="website-header">
-                        <span class="website-name">${escapeHtml(website.website)}</span>
-                        <a href="search-results.php?query=${encodeURIComponent(currentSearchQuery)}&website=${encodeURIComponent(website.website)}" class="more-btn" aria-label="See All ${escapeHtml(website.website)} results">
-                            See All<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-                            </svg>
-                        </a>
-                    </div>
-                `;
-
-                if (website.count === 0) {
-                    websiteDiv.innerHTML = headerHTML + '<div class="no-results">No results found on this site</div>';
-                } else {
-                    const carouselId = `carousel-${Math.random().toString(36).substr(2, 9)}`;
-                    let carouselHTML = `
-                        <div class="carousel-container">
-                            <button class="carousel-btn carousel-btn-prev" data-carousel="${carouselId}" aria-label="Previous">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-                                </svg>
-                            </button>
-                            <div class="carousel-wrapper">
-                                <div class="carousel-track" id="${carouselId}">
-                    `;
-                    
-                    website.results.forEach(item => {
-                        carouselHTML += `
-                            <div class="carousel-item-wrapper">
-                                <div class="carousel-item" data-title="${escapeHtml(item.title)}" data-link="${escapeHtml(item.link)}" data-image="${escapeHtml(item.image || '')}" data-language="${escapeHtml(item.language || '')}" data-genre="${escapeHtml(item.genre || '')}" data-imdb="${escapeHtml(item.imdb || '')}">
-                                    ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}" class="result-image lazy-image" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22280%22%3E%3Crect fill=%22%23ddd%22 width=%22200%22 height=%22280%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3ENo Image%3C/text%3E%3C/svg%3E'">` : '<div class="result-image"></div>'}
-                                </div>
-                                <div class="carousel-item-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div>
-                            </div>
-                        `;
-                    });
-                    
-                    carouselHTML += `
-                                </div>
-                            </div>
-                            <button class="carousel-btn carousel-btn-next" data-carousel="${carouselId}" aria-label="Next">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                                    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-                                </svg>
-                            </button>
-                        </div>
-                    `;
-                    websiteDiv.innerHTML = headerHTML + carouselHTML;
-                }
-            } else {
-                websiteDiv.innerHTML = `
-                    <div class="website-header">
-                        <span class="website-name">${escapeHtml(website.website)}</span>
-                    </div>
-                    <div class="website-error">
-                        ⚠️ Error fetching data from this site: ${escapeHtml(website.error)}
-                    </div>
-                `;
-            }
-
-            results.appendChild(websiteDiv);
-        });
-
-        showResults();
-        initializeCarousels();
-        
-        // Initialize movie card clicks after DOM is rendered
-        requestAnimationFrame(() => {
-            initializeMovieCardClicks();
-        });
-        
-        initializeLazyImages();
-    }
-
-    function scrollToResults() {
-        setTimeout(() => {
-            window.scrollBy({ 
-                top: 200, 
-                behavior: 'smooth' 
-            });
-        }, 100);
-    }
-
     function initializeCarousels() {
         const carousels = document.querySelectorAll('.carousel-track');
 
@@ -2875,15 +2776,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 const maxScroll = carousel.scrollWidth - carousel.clientWidth;
 
                 if (scrollLeft <= 0) {
-                    prevBtn.style.display = 'none';
+                    prevBtn.style.opacity = '0';
+                    prevBtn.style.pointerEvents = 'none';
                 } else {
-                    prevBtn.style.display = 'flex';
+                    prevBtn.style.opacity = '';
+                    prevBtn.style.pointerEvents = 'auto';
                 }
 
                 if (scrollLeft >= maxScroll - 1) {
-                    nextBtn.style.display = 'none';
+                    nextBtn.style.opacity = '0';
+                    nextBtn.style.pointerEvents = 'none';
                 } else {
-                    nextBtn.style.display = 'flex';
+                    nextBtn.style.opacity = '';
+                    nextBtn.style.pointerEvents = 'auto';
                 }
             }
 
@@ -2901,14 +2806,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 carousel.scrollBy({ left: scrollAmount, behavior: 'smooth' });
             });
         });
-    }
-
-    function showLoading() {
-        loadingMessage.style.display = 'block';
-    }
-
-    function hideLoading() {
-        loadingMessage.style.display = 'none';
     }
 
     function showResults() {
@@ -3062,20 +2959,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 openMovieModal(item);
             });
         });
-    }
-
-    function showSkeletonLoader(carouselElement) {
-        const track = carouselElement.querySelector('.carousel-track');
-        if (track) {
-            const skeletonHTML = Array(8).fill(0).map(() => `
-                <div class="carousel-item-wrapper">
-                    <div class="carousel-item skeleton-item">
-                        <div class="skeleton-image" style="background: rgba(26, 26, 26);"></div>
-                    </div>
-                </div>
-            `).join('');
-            track.innerHTML = skeletonHTML;
-        }
     }
 
     // Generic Section Data Store - for dynamically added sections
@@ -3426,10 +3309,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     const nextCardHtml = `
                         <div class="category-next-card" id="${categoryName}NextCard">
                             <span class="category-next-card-text">Load More</span>
+                            <span class="category-next-card-arrow">❯</span>
                         </div>
                     `;
                     grid.insertAdjacentHTML('beforeend', nextCardHtml);
-                    loadCategoryNextCardBackground(categoryName);
                 } else if (movies.length > 0) {
                     // Show "No more movies available" message if fewer than 8 movies were returned
                     const noMoreHtml = `
@@ -3476,6 +3359,7 @@ document.addEventListener('DOMContentLoaded', function() {
         html += `
             <div class="category-next-card" id="${categoryName}NextCard">
                 <span class="category-next-card-text">Load More</span>
+                <span class="category-next-card-arrow">❯</span>
             </div>
         </div>`;
         
@@ -3483,7 +3367,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         initializeCategoryClicks(categoryName);
         initializeLazyImages();
-        loadCategoryNextCardBackground(categoryName);
     }
     
     // Helper function to parse genres from movie data
@@ -3520,15 +3403,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const maxScroll = carousel.scrollWidth - carousel.clientWidth;
 
             if (scrollLeft <= 0) {
-                prevBtn.style.display = 'none';
+                prevBtn.style.opacity = '0';
+                prevBtn.style.pointerEvents = 'none';
             } else {
-                prevBtn.style.display = 'flex';
+                prevBtn.style.opacity = '';
+                prevBtn.style.pointerEvents = 'auto';
             }
 
             if (scrollLeft >= maxScroll - 1) {
-                nextBtn.style.display = 'none';
+                nextBtn.style.opacity = '0';
+                nextBtn.style.pointerEvents = 'none';
             } else {
-                nextBtn.style.display = 'flex';
+                nextBtn.style.opacity = '';
+                nextBtn.style.pointerEvents = 'auto';
             }
         }
 
@@ -3559,24 +3446,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Generic function to load next card background for categories
-    function loadCategoryNextCardBackground(categoryName) {
-        const nextCard = document.getElementById(`${categoryName}NextCard`);
-        
-        // Get category data from the dynamic store
-        const categoryData = categoryDataStore[categoryName] || [];
-        
-        if (nextCard && categoryData.length > 0) {
-            const randomMovie = categoryData[Math.floor(Math.random() * categoryData.length)];
-            if (randomMovie && randomMovie.image) {
-                nextCard.style.backgroundImage = `url(${randomMovie.image})`;
-                nextCard.style.backgroundSize = 'cover';
-                nextCard.style.backgroundPosition = 'center';
-            }
-        }
-    }
-
-    // Generic function to load next card background for generic sections
+    // Generic function to load next card background for generic sections (Next cards)
     function loadGenericSectionNextCardBackground(sectionKey) {
         const nextCard = document.getElementById(`${sectionKey}NextCard`);
         
@@ -4242,10 +4112,6 @@ document.addEventListener('DOMContentLoaded', function() {
         deferredPrompt = e;
         localStorage.setItem(PWA_PROMPT_AVAILABLE_KEY, 'true');
         
-        if (window.pwaDebugInfo) {
-            window.pwaDebugInfo.beforeInstallPromptFired = true;
-        }
-        
         showBanner(false);
     });
     
@@ -4386,8 +4252,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    window.observeNewSkeletons = observeSkeletons;
-    
     function initMutationObserver() {
         if (!supportsIntersectionObserver) return;
         
@@ -4431,5 +4295,74 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         initSkeletonObserver();
         initMutationObserver();
+    }
+})();
+
+(function() {
+    function showPlatformCards() {
+        const skeletonGrid = document.getElementById('searchPlatformsGrid');
+        const actualGrid = document.getElementById('searchPlatformsActual');
+        
+        if (skeletonGrid && actualGrid) {
+            skeletonGrid.style.display = 'none';
+            actualGrid.style.display = 'flex';
+            initPlatformCarousel();
+        }
+    }
+    
+    function initPlatformCarousel() {
+        const platformGrid = document.getElementById('searchPlatformsActual');
+        const prevBtn = document.querySelector('.platform-carousel-btn-prev');
+        const nextBtn = document.querySelector('.platform-carousel-btn-next');
+        
+        if (!platformGrid || !prevBtn || !nextBtn) return;
+        
+        const isDesktop = () => window.innerWidth >= 768;
+        
+        function updateArrowsVisibility() {
+            if (!isDesktop()) {
+                prevBtn.style.display = 'none';
+                nextBtn.style.display = 'none';
+                return;
+            }
+            
+            const scrollLeft = platformGrid.scrollLeft;
+            const maxScroll = platformGrid.scrollWidth - platformGrid.clientWidth;
+            
+            if (scrollLeft <= 0) {
+                prevBtn.style.display = 'none';
+            } else {
+                prevBtn.style.display = 'flex';
+            }
+            
+            if (scrollLeft >= maxScroll - 1) {
+                nextBtn.style.display = 'none';
+            } else {
+                nextBtn.style.display = 'flex';
+            }
+        }
+        
+        updateArrowsVisibility();
+        platformGrid.addEventListener('scroll', updateArrowsVisibility);
+        
+        prevBtn.addEventListener('click', function() {
+            const scrollAmount = platformGrid.offsetWidth * 0.8;
+            platformGrid.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+        });
+        
+        nextBtn.addEventListener('click', function() {
+            const scrollAmount = platformGrid.offsetWidth * 0.8;
+            platformGrid.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        });
+        
+        window.addEventListener('resize', updateArrowsVisibility);
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(showPlatformCards, 500);
+        });
+    } else {
+        setTimeout(showPlatformCards, 500);
     }
 })();

@@ -170,7 +170,7 @@ $displayName = "\"" . htmlspecialchars($query) . "\" - " . htmlspecialchars($web
         }
         
         .category-header-nav.scrolled {
-            background: rgba(15, 15, 15, 0.95) !important;
+            background: linear-gradient(to bottom, rgba(15, 15, 15, 1) 0%, rgba(15, 15, 15, 0.85) 100%) !important;
         }
         
         .category-nav-title {
@@ -445,6 +445,19 @@ $displayName = "\"" . htmlspecialchars($query) . "\" - " . htmlspecialchars($web
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmDialog" class="confirm-dialog-overlay" style="display: none;">
+        <div class="confirm-dialog">
+            <div class="confirm-dialog-content">
+                <h3 class="confirm-dialog-title" id="confirmDialogTitle">Clear watch history?</h3>
+                <p class="confirm-dialog-message" id="confirmDialogMessage">This will remove all recently viewed items from your history.</p>
+            </div>
+            <div class="confirm-dialog-actions">
+                <button class="confirm-dialog-btn confirm-dialog-btn-cancel" id="confirmDialogCancel">Cancel</button>
+                <button class="confirm-dialog-btn confirm-dialog-btn-confirm" id="confirmDialogConfirm">Clear watch History</button>
             </div>
         </div>
     </div>
