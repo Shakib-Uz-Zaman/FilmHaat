@@ -137,4 +137,3 @@ if ($hasAnyPoster) {
 }
 
 echo $output;
-?>

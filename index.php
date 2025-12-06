@@ -1,4 +1,7 @@
-<?php require_once 'config.php'; ?>
+<?php 
+require_once 'config.php';
+require_once 'config-helpers.php';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -373,11 +376,14 @@
                                             $visibleSearchWebsites = array_filter($SEARCH_WEBSITES, function($website) {
                                                 return !isset($website['hidden']) || $website['hidden'] !== true;
                                             });
-                                            foreach ($visibleSearchWebsites as $websiteName => $website): 
+                                            foreach ($visibleSearchWebsites as $websiteKey => $website): 
+                                            $domain = getDomainFromUrl($website['url']);
+                                            $faviconUrl = getFaviconUrl($website['url']);
                                             ?>
                                             <label class="filter-option">
-                                                <input type="checkbox" class="filter-checkbox" value="<?php echo htmlspecialchars($websiteName); ?>" checked>
-                                                <span><?php echo htmlspecialchars($websiteName); ?></span>
+                                                <input type="checkbox" class="filter-checkbox" value="<?php echo htmlspecialchars($websiteKey); ?>" checked>
+                                                <img class="filter-favicon" src="<?php echo htmlspecialchars($faviconUrl); ?>" alt="" onerror="this.style.display='none'">
+                                                <span><?php echo htmlspecialchars($websiteKey); ?></span>
                                             </label>
                                             <?php endforeach; ?>
                                         </div>
@@ -515,7 +521,6 @@
         </div>
     </div>
 
-
     <?php
     function generateSectionMapping($configKey, $displayName) {
         $keyLower = strtolower($configKey);
@@ -583,8 +588,7 @@
                 <div class="search-platforms-grid search-platforms-actual" id="searchPlatformsActual">
                     <?php foreach ($visibleSearchWebsites as $websiteName => $websiteData): 
                         $websiteUrl = $websiteData['url'];
-                        $parsedUrl = parse_url($websiteUrl);
-                        $domain = isset($parsedUrl['host']) ? $parsedUrl['host'] : $websiteUrl;
+                        $domain = getDomainFromUrl($websiteUrl);
                         $faviconUrl = 'https://www.google.com/s2/favicons?domain=' . urlencode($domain) . '&sz=64';
                     ?>
                     <a href="<?php echo htmlspecialchars($websiteUrl); ?>" target="_blank" rel="noopener noreferrer" class="search-platform-card">
@@ -601,6 +605,150 @@
             </button>
         </div>
     </div>
+    <?php 
+                endif;
+            elseif ($configKey === 'MOVIE_COLLECTIONS'):
+                $visibleCollections = array_filter($MOVIE_COLLECTIONS_DATA, function($collection) {
+                    return !isset($collection['hidden']) || !$collection['hidden'];
+                });
+                $collectionsPerPage = 4;
+                $totalCollections = count($visibleCollections);
+                $hasMoreCollections = $totalCollections > $collectionsPerPage;
+                $initialCollections = array_slice($visibleCollections, 0, $collectionsPerPage, true);
+                if (count($visibleCollections) > 0):
+    ?>
+    <div class="collections-section" id="<?php echo $section['id']; ?>" style="display: block;">
+        <div class="section-header">
+            <h2 class="website-name"><?php echo htmlspecialchars($section['name']); ?></h2>
+        </div>
+        <div class="collections-carousel-container">
+            <button class="carousel-btn carousel-btn-prev" data-carousel="collectionsTrack" aria-label="Previous collections">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                </svg>
+            </button>
+            <div class="collections-wrapper">
+                <!-- Skeleton Loading -->
+                <div class="collections-track collections-skeleton-track" id="collectionsSkeletonTrack">
+                    <?php 
+                    $skeletonCount = min(count($initialCollections) + ($hasMoreCollections ? 1 : 0), 8);
+                    if ($skeletonCount < 4) $skeletonCount = 4;
+                    for ($i = 0; $i < $skeletonCount; $i++): ?>
+                    <div class="collection-card collection-skeleton-card">
+                        <div class="collection-poster collection-skeleton-poster">
+                            <div class="collection-skeleton-shimmer"></div>
+                        </div>
+                        <div class="collection-info collection-skeleton-info">
+                            <div class="collection-text">
+                                <div class="collection-skeleton-title"></div>
+                                <div class="collection-skeleton-count"></div>
+                            </div>
+                            <div class="collection-skeleton-play"></div>
+                        </div>
+                    </div>
+                    <?php endfor; ?>
+                </div>
+                <!-- Actual Content -->
+                <div class="collections-track collections-actual-track" id="collectionsTrack" style="display: none;">
+                    <?php 
+                    $collectionIndex = 0;
+                    foreach ($initialCollections as $collectionKey => $collection): 
+                        $displayName = isset($collection['display_name']) ? $collection['display_name'] : ucfirst(str_replace('_', ' ', $collectionKey));
+                        $movies = isset($collection['movies']) ? array_filter($collection['movies'], function($m) {
+                            return !isset($m['hidden']) || !$m['hidden'];
+                        }) : [];
+                        $movieCount = count($movies);
+                        $coverImage = '';
+                        if (isset($collection['cover_image']) && !empty($collection['cover_image'])) {
+                            $coverImage = $collection['cover_image'];
+                        } elseif ($movieCount > 0) {
+                            $firstMovie = reset($movies);
+                            $coverImage = isset($firstMovie['image']) ? $firstMovie['image'] : '';
+                        }
+                    ?>
+                    <a href="collection.php?collection=<?php echo urlencode($collectionKey); ?>" class="collection-card" data-collection-index="<?php echo $collectionIndex; ?>">
+                        <div class="collection-poster">
+                            <?php if (!empty($coverImage)): ?>
+                            <img src="image-proxy.php?url=<?php echo urlencode($coverImage); ?>" alt="<?php echo htmlspecialchars($displayName); ?>" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\'collection-placeholder\'><svg width=\'40\' height=\'40\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'#666\' stroke-width=\'1.5\'><rect x=\'3\' y=\'3\' width=\'18\' height=\'18\' rx=\'2\' ry=\'2\'/><circle cx=\'8.5\' cy=\'8.5\' r=\'1.5\'/><path d=\'M21 15l-5-5L5 21\'/></svg></div>'">
+                            <?php else: ?>
+                            <div class="collection-placeholder">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                                    <path d="M21 15l-5-5L5 21"/>
+                                </svg>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="collection-info">
+                            <div class="collection-text">
+                                <h3 class="collection-title"><?php echo htmlspecialchars($displayName); ?></h3>
+                                <span class="collection-count"><?php echo $movieCount; ?> Movies</span>
+                            </div>
+                            <div class="collection-play-btn">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18a1 1 0 0 0 0-1.69L9.54 5.98A1 1 0 0 0 8 6.82z"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </a>
+                    <?php 
+                    $collectionIndex++;
+                    endforeach; 
+                    
+                    if ($hasMoreCollections):
+                        $nextCollectionForBg = array_slice($visibleCollections, $collectionsPerPage, 1, true);
+                        $nextBgImage = '';
+                        if (!empty($nextCollectionForBg)) {
+                            $nextCollection = reset($nextCollectionForBg);
+                            if (isset($nextCollection['cover_image']) && !empty($nextCollection['cover_image'])) {
+                                $nextBgImage = $nextCollection['cover_image'];
+                            } elseif (isset($nextCollection['movies']) && count($nextCollection['movies']) > 0) {
+                                $firstMovie = reset($nextCollection['movies']);
+                                $nextBgImage = isset($firstMovie['image']) ? $firstMovie['image'] : '';
+                            }
+                        }
+                    ?>
+                    <div class="collection-next-card" id="collectionsNextCard" style="<?php echo !empty($nextBgImage) ? 'background-image: url(\'image-proxy.php?url=' . urlencode($nextBgImage) . '\');' : ''; ?>">
+                        <span class="collection-next-card-text">Next</span>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <button class="carousel-btn carousel-btn-next" data-carousel="collectionsTrack" aria-label="Next collections">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+    <script>
+        window.COLLECTIONS_DATA = <?php 
+            $collectionsForJs = [];
+            foreach ($visibleCollections as $key => $collection) {
+                $movies = isset($collection['movies']) ? array_filter($collection['movies'], function($m) {
+                    return !isset($m['hidden']) || !$m['hidden'];
+                }) : [];
+                $movieCount = count($movies);
+                $coverImage = '';
+                if (isset($collection['cover_image']) && !empty($collection['cover_image'])) {
+                    $coverImage = $collection['cover_image'];
+                } elseif ($movieCount > 0) {
+                    $firstMovie = reset($movies);
+                    $coverImage = isset($firstMovie['image']) ? $firstMovie['image'] : '';
+                }
+                $collectionsForJs[] = [
+                    'key' => $key,
+                    'display_name' => isset($collection['display_name']) ? $collection['display_name'] : ucfirst(str_replace('_', ' ', $key)),
+                    'movie_count' => $movieCount,
+                    'cover_image' => $coverImage
+                ];
+            }
+            echo json_encode($collectionsForJs);
+        ?>;
+        window.COLLECTIONS_PER_PAGE = <?php echo $collectionsPerPage; ?>;
+        window.COLLECTIONS_CURRENT_INDEX = <?php echo $collectionsPerPage; ?>;
+    </script>
     <?php 
                 endif;
             else:
@@ -777,7 +925,7 @@
             echo json_encode($allSectionsConfig);
         ?>;
     </script>
-    <script src="script.js?v=<?php echo time(); ?>" defer></script>
+    <script src="script.js" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

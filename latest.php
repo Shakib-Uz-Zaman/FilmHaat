@@ -1,5 +1,6 @@
 <?php 
 require_once 'config.php';
+require_once 'config-helpers.php';
 
 // Get category from URL parameter
 $category = isset($_GET['category']) ? strtoupper($_GET['category']) : '';
@@ -27,7 +28,7 @@ $categoryLower = strtolower($category);
     <title><?php echo htmlspecialchars($displayName); ?> Movies - <?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></title>
     <meta name="description" content="Discover the latest movies and trending releases. Browse fresh content from multiple websites updated regularly. Find new movies to watch - completely free with no registration.">
     <link rel="stylesheet" href="styles.css">
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.php">
     
     <!-- Critical CSS for Bottom Navigation - Loaded before page content -->
     <style>
@@ -289,9 +290,6 @@ $categoryLower = strtolower($category);
             transition: opacity 0.1s linear;
         }
         
-        .category-page-subtitle {
-            display: none;
-        }
         
         .category-page-content {
             max-width: 1920px;
@@ -479,7 +477,6 @@ $categoryLower = strtolower($category);
             </button>
         </div>
         <h1 class="category-page-title"><?php echo htmlspecialchars($displayName); ?></h1>
-        <p class="category-page-subtitle">Browse all <?php echo htmlspecialchars($displayName); ?> movies and series</p>
     </div>
 
     <div id="searchPopupModal" class="search-popup-modal" style="display: none;">
@@ -523,11 +520,14 @@ $categoryLower = strtolower($category);
                                             $visibleSearchWebsites = array_filter($SEARCH_WEBSITES, function($website) {
                                                 return !isset($website['hidden']) || $website['hidden'] !== true;
                                             });
-                                            foreach ($visibleSearchWebsites as $websiteName => $website): 
+                                            foreach ($visibleSearchWebsites as $websiteKey => $website): 
+                                            $domain = getDomainFromUrl($website['url']);
+                                            $faviconUrl = getFaviconUrl($website['url']);
                                             ?>
                                             <label class="filter-option">
-                                                <input type="checkbox" class="filter-checkbox" value="<?php echo htmlspecialchars($websiteName); ?>" checked>
-                                                <span><?php echo htmlspecialchars($websiteName); ?></span>
+                                                <input type="checkbox" class="filter-checkbox" value="<?php echo htmlspecialchars($websiteKey); ?>" checked>
+                                                <img class="filter-favicon" src="<?php echo htmlspecialchars($faviconUrl); ?>" alt="" onerror="this.style.display='none'">
+                                                <span><?php echo htmlspecialchars($websiteKey); ?></span>
                                             </label>
                                             <?php endforeach; ?>
                                         </div>
@@ -917,10 +917,22 @@ $categoryLower = strtolower($category);
                 saveToRecentViewed(title, link, image, language, genre, website);
             }
             
+            // Track for weekly top 10
+            if (typeof trackMovieView === 'function') {
+                trackMovieView(title, link, image, language, website);
+            }
+            
             modalTitle.textContent = title;
             modalLink.href = link;
             modalLanguage.textContent = language || '';
-            modalWebsite.textContent = website || '';
+            
+            const faviconUrl = getFaviconUrl(link);
+            const displayName = website || getDomainFromUrl(link);
+            if (displayName && faviconUrl) {
+                modalWebsite.innerHTML = `<img class="modal-favicon" src="${escapeHtml(faviconUrl)}" alt="" onerror="this.style.display='none'"> ${escapeHtml(displayName)}`;
+            } else {
+                modalWebsite.textContent = displayName || '';
+            }
             
             // Update loved button state
             const modalLovedBtn = document.getElementById('modalLovedBtn');
@@ -1044,6 +1056,22 @@ $categoryLower = strtolower($category);
             return div.innerHTML;
         }
         
+        function getDomainFromUrl(url) {
+            if (!url) return '';
+            try {
+                const parsedUrl = new URL(url);
+                return parsedUrl.hostname;
+            } catch (e) {
+                return '';
+            }
+        }
+        
+        function getFaviconUrl(url) {
+            const domain = getDomainFromUrl(url);
+            if (!domain) return '';
+            return 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(domain) + '&sz=16';
+        }
+        
         // Initialize lazy images
         function initializeLazyImages() {
             const lazyImages = document.querySelectorAll('.lazy-image');
@@ -1126,7 +1154,13 @@ $categoryLower = strtolower($category);
                             const genreTags = genres.map(g => `<span class="category-genre-tag">${escapeHtml(g)}</span>`).join('');
                             
                             const categoryTag = movie.category ? `<span class="category-genre-tag">${escapeHtml(movie.category)}</span>` : '';
-                            const websiteTag = movie.website ? `<span class="category-genre-tag category-website-tag">${escapeHtml(movie.website.toUpperCase())}</span>` : '';
+                            
+                            let websiteTag = '';
+                            const wsDisplayName = movie.website || getDomainFromUrl(movie.link);
+                            if (wsDisplayName) {
+                                const wsFavicon = getFaviconUrl(movie.link);
+                                websiteTag = `<span class="category-genre-tag category-website-tag"><img class="website-tag-favicon" src="${escapeHtml(wsFavicon)}" alt="" onerror="this.style.display='none'">${escapeHtml(wsDisplayName)}</span>`;
+                            }
                             
                             const itemHtml = `
                                 <div class="category-grid-item new-item" 
@@ -1233,7 +1267,13 @@ $categoryLower = strtolower($category);
                 const genreTags = genres.map(g => `<span class="category-genre-tag">${escapeHtml(g)}</span>`).join('');
                 
                 const categoryTag = movie.category ? `<span class="category-genre-tag">${escapeHtml(movie.category)}</span>` : '';
-                const websiteTag = movie.website ? `<span class="category-genre-tag category-website-tag">${escapeHtml(movie.website.toUpperCase())}</span>` : '';
+                
+                let websiteTag = '';
+                const wsDisplayName = movie.website || getDomainFromUrl(movie.link);
+                if (wsDisplayName) {
+                    const wsFavicon = getFaviconUrl(movie.link);
+                    websiteTag = `<span class="category-genre-tag category-website-tag"><img class="website-tag-favicon" src="${escapeHtml(wsFavicon)}" alt="" onerror="this.style.display='none'">${escapeHtml(wsDisplayName)}</span>`;
+                }
                 
                 html += `
                     <div class="category-grid-item" 
@@ -1358,14 +1398,8 @@ $categoryLower = strtolower($category);
             }
         }
 
-        const bottomNavSearchBtn = document.getElementById('bottomNavSearch');
-
         if (headerSearchBtn) {
             headerSearchBtn.addEventListener('click', openSearchPopup);
-        }
-
-        if (bottomNavSearchBtn) {
-            bottomNavSearchBtn.addEventListener('click', openSearchPopup);
         }
 
         if (searchPopupClose) {

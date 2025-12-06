@@ -1,5 +1,6 @@
 <?php 
 require_once 'config.php';
+require_once 'config-helpers.php';
 
 $query = isset($_GET['query']) ? trim($_GET['query']) : '';
 $websiteName = isset($_GET['website']) ? trim($_GET['website']) : '';
@@ -14,6 +15,9 @@ if (!isset($SEARCH_WEBSITES[$websiteName])) {
     exit;
 }
 
+$websiteData = $SEARCH_WEBSITES[$websiteName];
+$websiteDomain = getDomainFromUrl($websiteData['url']);
+$websiteFaviconUrl = getFaviconUrl($websiteData['url']);
 $displayName = "\"" . htmlspecialchars($query) . "\" - " . htmlspecialchars($websiteName);
 ?>
 <!DOCTYPE html>
@@ -26,9 +30,9 @@ $displayName = "\"" . htmlspecialchars($query) . "\" - " . htmlspecialchars($web
     <link rel="icon" type="image/webp" href="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>">
     <link rel="apple-touch-icon" href="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>">
     <title><?php echo $displayName; ?> - <?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></title>
-    <meta name="description" content="Search results for <?php echo htmlspecialchars($query); ?> on <?php echo htmlspecialchars($websiteName); ?>">
+    <meta name="description" content="Search results for <?php echo htmlspecialchars($query); ?> on <?php echo htmlspecialchars($websiteDomain); ?>">
     <link rel="stylesheet" href="styles.css">
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.php">
     <script>
         window.SITE_SETTINGS = {
             website_name: <?php echo json_encode($SITE_SETTINGS['website_name']); ?>,
@@ -37,6 +41,8 @@ $displayName = "\"" . htmlspecialchars($query) . "\" - " . htmlspecialchars($web
         };
         window.SEARCH_QUERY = <?php echo json_encode($query); ?>;
         window.WEBSITE_NAME = <?php echo json_encode($websiteName); ?>;
+        window.WEBSITE_DOMAIN = <?php echo json_encode($websiteDomain); ?>;
+        window.WEBSITE_FAVICON = <?php echo json_encode($websiteFaviconUrl); ?>;
     </script>
     <style>
         html, body {
@@ -90,10 +96,6 @@ $displayName = "\"" . htmlspecialchars($query) . "\" - " . htmlspecialchars($web
             position: relative;
             z-index: 3;
             transition: opacity 0.1s linear;
-        }
-        
-        .category-page-subtitle {
-            display: none;
         }
         
         .category-page-content {
@@ -333,9 +335,12 @@ $displayName = "\"" . htmlspecialchars($query) . "\" - " . htmlspecialchars($web
                                                 return !isset($website['hidden']) || $website['hidden'] !== true;
                                             });
                                             foreach ($visibleSearchWebsites as $wsName => $website): 
+                                            $wsDomain = getDomainFromUrl($website['url']);
+                                            $wsFaviconUrl = getFaviconUrl($website['url']);
                                             ?>
                                             <label class="filter-option">
                                                 <input type="checkbox" class="filter-checkbox" value="<?php echo htmlspecialchars($wsName); ?>" checked>
+                                                <img class="filter-favicon" src="<?php echo htmlspecialchars($wsFaviconUrl); ?>" alt="" onerror="this.style.display='none'">
                                                 <span><?php echo htmlspecialchars($wsName); ?></span>
                                             </label>
                                             <?php endforeach; ?>
@@ -572,8 +577,8 @@ $displayName = "\"" . htmlspecialchars($query) . "\" - " . htmlspecialchars($web
         
         function isLoved(movieData) {
             try {
-                const lovedMovies = JSON.parse(localStorage.getItem('lovedMovies') || '[]');
-                return lovedMovies.some(m => m.link === movieData.link);
+                const lovedMoviesData = JSON.parse(localStorage.getItem('lovedMoviesData') || '[]');
+                return lovedMoviesData.some(m => m.title === movieData.title);
             } catch (e) {
                 return false;
             }
@@ -581,24 +586,30 @@ $displayName = "\"" . htmlspecialchars($query) . "\" - " . htmlspecialchars($web
         
         function toggleLoved(movieData) {
             try {
-                let lovedMovies = JSON.parse(localStorage.getItem('lovedMovies') || '[]');
-                const existingIndex = lovedMovies.findIndex(m => m.link === movieData.link);
+                let lovedMoviesData = JSON.parse(localStorage.getItem('lovedMoviesData') || '[]');
+                const existingIndex = lovedMoviesData.findIndex(m => m.title === movieData.title);
                 
                 if (existingIndex > -1) {
-                    lovedMovies.splice(existingIndex, 1);
+                    lovedMoviesData.splice(existingIndex, 1);
                 } else {
-                    lovedMovies.unshift({
+                    lovedMoviesData.unshift({
                         title: movieData.title,
                         link: movieData.link,
                         image: movieData.image,
                         language: movieData.language,
+                        genre: movieData.genre || '',
                         website: movieData.website,
-                        addedAt: Date.now()
+                        lovedAt: new Date().toISOString()
                     });
                 }
                 
-                localStorage.setItem('lovedMovies', JSON.stringify(lovedMovies));
-                return !isLoved(movieData);
+                localStorage.setItem('lovedMoviesData', JSON.stringify(lovedMoviesData));
+                
+                window.dispatchEvent(new CustomEvent('lovedMoviesUpdated', {
+                    detail: { action: existingIndex > -1 ? 'removed' : 'added', movie: movieData }
+                }));
+                
+                return existingIndex === -1;
             } catch (e) {
                 return false;
             }
@@ -630,7 +641,31 @@ $displayName = "\"" . htmlspecialchars($query) . "\" - " . htmlspecialchars($web
             modalTitle.textContent = movieData.title || '';
             modalLink.href = movieData.link || '#';
             modalLanguage.textContent = movieData.language || '';
-            modalWebsite.textContent = movieData.website || window.WEBSITE_NAME || '';
+            const displayName = movieData.website || window.WEBSITE_NAME || '';
+            const faviconUrl = window.WEBSITE_FAVICON || '';
+            modalWebsite.innerHTML = faviconUrl ? `<img class="modal-favicon" src="${escapeHtml(faviconUrl)}" alt="" onerror="this.style.display='none'"> ${escapeHtml(displayName)}` : escapeHtml(displayName);
+            
+            const websiteName = movieData.website || window.WEBSITE_NAME || '';
+            if (typeof saveToRecentViewed === 'function') {
+                saveToRecentViewed(
+                    movieData.title,
+                    movieData.link,
+                    movieData.image,
+                    movieData.language,
+                    movieData.genre || '',
+                    websiteName,
+                    true
+                );
+            }
+            
+            if (typeof trackMovieView === 'function') {
+                trackMovieView(
+                    movieData.title,
+                    movieData.link,
+                    movieData.image,
+                    movieData.language
+                );
+            }
             
             updateLovedButton(movieData);
             
@@ -813,11 +848,12 @@ $displayName = "\"" . htmlspecialchars($query) . "\" - " . htmlspecialchars($web
                          data-link="${escapeHtml(item.link)}" 
                          data-image="${escapeHtml(item.image || '')}" 
                          data-language="${escapeHtml(item.language || '')}"
+                         data-website="${escapeHtml(item.website || '')}"
                          style="cursor: pointer;">
                         ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}" class="result-image lazy-image" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22280%22%3E%3Crect fill=%22%23ddd%22 width=%22200%22 height=%22280%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3ENo Image%3C/text%3E%3C/svg%3E'">` : '<div class="result-image"></div>'}
                         <div class="category-movie-info">
                             <h3 class="category-movie-title">${escapeHtml(item.title)}</h3>
-                            <div class="category-movie-genres">${genreTags}</div>
+                            <div class="category-movie-genres">${genreTags}<span class="category-genre-tag category-website-tag"><img class="website-tag-favicon" src="${escapeHtml(window.WEBSITE_FAVICON || '')}" alt="" onerror="this.style.display='none'">${escapeHtml(window.WEBSITE_NAME || '')}</span></div>
                         </div>
                     </div>
                 `;
@@ -828,10 +864,10 @@ $displayName = "\"" . htmlspecialchars($query) . "\" - " . htmlspecialchars($web
                 const nextCardHtml = `
                     <div class="category-next-card" id="categoryNextCard">
                         <span class="category-next-card-text">Load More</span>
+                        <span class="category-next-card-arrow">❯</span>
                     </div>
                 `;
                 categoryPageGrid.insertAdjacentHTML('beforeend', nextCardHtml);
-                loadNextCardBackground();
             }
             
             initializeLazyImages();
@@ -895,11 +931,12 @@ $displayName = "\"" . htmlspecialchars($query) . "\" - " . htmlspecialchars($web
                                      data-link="${escapeHtml(item.link)}" 
                                      data-image="${escapeHtml(item.image || '')}" 
                                      data-language="${escapeHtml(item.language || '')}"
+                                     data-website="${escapeHtml(item.website || '')}"
                                      style="cursor: pointer;">
                                     ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}" class="result-image lazy-image" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22280%22%3E%3Crect fill=%22%23ddd%22 width=%22200%22 height=%22280%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3ENo Image%3C/text%3E%3C/svg%3E'">` : '<div class="result-image"></div>'}
                                     <div class="category-movie-info">
                                         <h3 class="category-movie-title">${escapeHtml(item.title)}</h3>
-                                        <div class="category-movie-genres">${genreTags}</div>
+                                        <div class="category-movie-genres">${genreTags}<span class="category-genre-tag category-website-tag"><img class="website-tag-favicon" src="${escapeHtml(window.WEBSITE_FAVICON || '')}" alt="" onerror="this.style.display='none'">${escapeHtml(window.WEBSITE_NAME || '')}</span></div>
                                     </div>
                                 </div>
                             `;
@@ -921,10 +958,10 @@ $displayName = "\"" . htmlspecialchars($query) . "\" - " . htmlspecialchars($web
                             const nextCardHtml = `
                                 <div class="category-next-card" id="categoryNextCard">
                                     <span class="category-next-card-text">Load More</span>
+                                    <span class="category-next-card-arrow">❯</span>
                                 </div>
                             `;
                             categoryPageGrid.insertAdjacentHTML('beforeend', nextCardHtml);
-                            loadNextCardBackground();
                         }
                     } else if (append) {
                         const noMoreHtml = `

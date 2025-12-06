@@ -3,8 +3,6 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: public, max-age=300, stale-while-revalidate=600');
 header('Vary: Accept-Encoding');
 
-define('DEDUPLICATION_MODE', true);
-
 require_once 'config.php';
 require_once 'generic-section.php';
 
@@ -26,8 +24,7 @@ function deduplicateSections($page = 1, $specificSection = null) {
     $sectionsConfig = [];
     
     foreach ($GLOBALS['ALL_SECTION_WEBSITES'] as $configKey => $websites) {
-        // Skip SEARCH_LINKS - it's a static built-in section that doesn't need fetching
-        if ($configKey === 'SEARCH_LINKS') {
+        if ($configKey === 'SEARCH_LINKS' || $configKey === 'MOVIE_COLLECTIONS') {
             continue;
         }
         
@@ -41,16 +38,11 @@ function deduplicateSections($page = 1, $specificSection = null) {
         
         $sectionsConfig[$sectionKey] = [
             'websites' => array_filter($websites, function($w, $k) { return $k !== 'display_name' && (!isset($w['hidden']) || !$w['hidden']); }, ARRAY_FILTER_USE_BOTH),
-            'fetch_func' => 'fetchGenericSectionMovies',
             'name' => $displayName
         ];
     }
     
     $allMoviesBySection = [];
-    foreach ($sectionsConfig as $sectionKey => $config) {
-        $allMoviesBySection[$sectionKey] = [];
-    }
-    
     foreach ($sectionsConfig as $sectionKey => $config) {
         foreach ($config['websites'] as $websiteName => $website) {
             $result = fetchGenericSectionMovies($websiteName, $website, $page);
@@ -63,9 +55,10 @@ function deduplicateSections($page = 1, $specificSection = null) {
         }
     }
     
-    $deduplicatedSections = [];
+    $finalSections = [];
     
-    foreach ($allMoviesBySection as $sectionKey => $movies) {
+    foreach ($sectionsConfig as $sectionKey => $config) {
+        $movies = isset($allMoviesBySection[$sectionKey]) ? $allMoviesBySection[$sectionKey] : [];
         $seenTitles = [];
         $uniqueMovies = [];
         
@@ -82,29 +75,12 @@ function deduplicateSections($page = 1, $specificSection = null) {
             }
         }
         
-        $deduplicatedSections[$sectionKey] = $uniqueMovies;
-    }
-    
-    $finalSections = [];
-    foreach ($sectionsConfig as $sectionKey => $config) {
-        if (isset($deduplicatedSections[$sectionKey])) {
-            $movies = $deduplicatedSections[$sectionKey];
-            $movies = array_slice($movies, 0, 12);
-            
-            $finalSections[$sectionKey] = [
-                'success' => true,
-                'name' => $config['name'],
-                'results' => $movies,
-                'count' => count($movies)
-            ];
-        } else {
-            $finalSections[$sectionKey] = [
-                'success' => true,
-                'name' => $config['name'],
-                'results' => [],
-                'count' => 0
-            ];
-        }
+        $finalSections[$sectionKey] = [
+            'success' => true,
+            'name' => $config['name'],
+            'results' => $uniqueMovies,
+            'count' => count($uniqueMovies)
+        ];
     }
     
     return $finalSections;
@@ -120,11 +96,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         'success' => true,
         'sections' => $result,
         'page' => $page
-    ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    ], JSON_UNESCAPED_UNICODE);
 } else {
     echo json_encode([
         'success' => false,
         'error' => 'Invalid request method'
     ]);
 }
-?>

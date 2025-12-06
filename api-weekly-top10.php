@@ -4,8 +4,6 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET');
 header('Access-Control-Allow-Headers: Content-Type');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-header('Pragma: no-cache');
-header('Expires: 0');
 
 const VIEWS_FILE = 'data/weekly_views.json';
 const SEVEN_DAYS_SECONDS = 7 * 24 * 60 * 60;
@@ -54,9 +52,8 @@ function saveViews($views) {
     }
 }
 
-function trackView($title, $link, $image, $language) {
+function trackView($title, $link, $image, $language, $website) {
     if (empty($title) || empty($link)) {
-        error_log("Weekly Top 10: Missing title or link");
         return ['success' => false, 'error' => 'Title and link are required'];
     }
     
@@ -68,6 +65,7 @@ function trackView($title, $link, $image, $language) {
         'link' => $link,
         'image' => $image,
         'language' => $language,
+        'website' => $website,
         'timestamp' => time()
     ];
     
@@ -75,11 +73,9 @@ function trackView($title, $link, $image, $language) {
     $saved = saveViews($views);
     
     if (!$saved) {
-        error_log("Weekly Top 10: Failed to save view - " . substr($title, 0, 50));
         return ['success' => false, 'error' => 'Failed to save view'];
     }
     
-    error_log("Weekly Top 10: View tracked successfully - " . substr($title, 0, 50));
     return ['success' => true];
 }
 
@@ -98,15 +94,12 @@ function getTop10() {
                 'link' => $view['link'],
                 'image' => $view['image'],
                 'language' => $view['language'],
-                'count' => 0,
-                'lastViewed' => $view['timestamp']
+                'website' => $view['website'] ?? '',
+                'count' => 0
             ];
         }
         
         $movieCounts[$movieKey]['count']++;
-        if ($view['timestamp'] > $movieCounts[$movieKey]['lastViewed']) {
-            $movieCounts[$movieKey]['lastViewed'] = $view['timestamp'];
-        }
     }
     
     $moviesArray = array_values($movieCounts);
@@ -125,7 +118,6 @@ if ($method === 'POST') {
     $input = json_decode($rawInput, true);
     
     if ($input === null) {
-        error_log("Weekly Top 10: Invalid JSON received - " . substr($rawInput, 0, 100));
         echo json_encode(['success' => false, 'error' => 'Invalid JSON']);
         exit;
     }
@@ -135,11 +127,11 @@ if ($method === 'POST') {
             $input['title'] ?? '',
             $input['link'] ?? '',
             $input['image'] ?? '',
-            $input['language'] ?? ''
+            $input['language'] ?? '',
+            $input['website'] ?? ''
         );
         echo json_encode($result);
     } else {
-        error_log("Weekly Top 10: Invalid action - " . ($input['action'] ?? 'none'));
         echo json_encode(['success' => false, 'error' => 'Invalid action']);
     }
 } elseif ($method === 'GET') {

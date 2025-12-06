@@ -1,5 +1,6 @@
 <?php 
 require_once 'config.php';
+require_once 'config-helpers.php';
 
 $displayName = "Loved Movies";
 ?>
@@ -15,7 +16,7 @@ $displayName = "Loved Movies";
     <title>My Loved Movies - <?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></title>
     <meta name="description" content="Keep all your favorite movies and shows in one simple list. Save what you love and come back anytime.">
     <link rel="stylesheet" href="styles.css">
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.php">
     
     <!-- Critical CSS for Bottom Navigation - Loaded before page content -->
     <style>
@@ -316,9 +317,6 @@ $displayName = "Loved Movies";
             display: none;
         }
         
-        .category-page-subtitle {
-            display: none;
-        }
         
         .category-page-content {
             max-width: 1920px;
@@ -586,7 +584,6 @@ $displayName = "Loved Movies";
             </button>
         </div>
         <h1 class="category-page-title"><?php echo htmlspecialchars($displayName); ?></h1>
-        <p class="category-page-subtitle">Your favorite movies and series</p>
     </div>
 
     <div id="searchPopupModal" class="search-popup-modal" style="display: none;">
@@ -630,11 +627,14 @@ $displayName = "Loved Movies";
                                             $visibleSearchWebsites = array_filter($SEARCH_WEBSITES, function($website) {
                                                 return !isset($website['hidden']) || $website['hidden'] !== true;
                                             });
-                                            foreach ($visibleSearchWebsites as $websiteName => $website): 
+                                            foreach ($visibleSearchWebsites as $websiteKey => $website): 
+                                            $domain = getDomainFromUrl($website['url']);
+                                            $faviconUrl = getFaviconUrl($website['url']);
                                             ?>
                                             <label class="filter-option">
-                                                <input type="checkbox" class="filter-checkbox" value="<?php echo htmlspecialchars($websiteName); ?>" checked>
-                                                <span><?php echo htmlspecialchars($websiteName); ?></span>
+                                                <input type="checkbox" class="filter-checkbox" value="<?php echo htmlspecialchars($websiteKey); ?>" checked>
+                                                <img class="filter-favicon" src="<?php echo htmlspecialchars($faviconUrl); ?>" alt="" onerror="this.style.display='none'">
+                                                <span><?php echo htmlspecialchars($websiteKey); ?></span>
                                             </label>
                                             <?php endforeach; ?>
                                         </div>
@@ -976,10 +976,22 @@ $displayName = "Loved Movies";
                 saveToRecentViewed(title, link, image, language, genre, website);
             }
             
+            // Track for weekly top 10
+            if (typeof trackMovieView === 'function') {
+                trackMovieView(title, link, image, language, website);
+            }
+            
             modalTitle.textContent = title;
             modalLink.href = link;
             modalLanguage.textContent = language || '';
-            modalWebsite.textContent = website || '';
+            
+            const faviconUrl = getFaviconUrl(link);
+            const displayName = website || getDomainFromUrl(link);
+            if (displayName && faviconUrl) {
+                modalWebsite.innerHTML = `<img class="modal-favicon" src="${escapeHtml(faviconUrl)}" alt="" onerror="this.style.display='none'"> ${escapeHtml(displayName)}`;
+            } else {
+                modalWebsite.textContent = displayName || '';
+            }
             
             // Update modalLovedBtn with current movie data and state
             const modalLovedBtn = document.getElementById('modalLovedBtn');
@@ -1070,16 +1082,6 @@ $displayName = "Loved Movies";
 
         const searchPopupModal = document.getElementById('searchPopupModal');
         const searchPopupClose = document.getElementById('searchPopupClose');
-        const bottomNavSearchBtn = document.getElementById('bottomNavSearch');
-        
-        if (bottomNavSearchBtn) {
-            bottomNavSearchBtn.addEventListener('click', () => {
-                if (searchPopupModal) {
-                    searchPopupModal.style.display = 'flex';
-                    document.body.style.overflow = 'hidden';
-                }
-            });
-        }
         
         if (searchPopupClose) {
             searchPopupClose.addEventListener('click', () => {
@@ -1129,6 +1131,22 @@ $displayName = "Loved Movies";
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+        
+        function getDomainFromUrl(url) {
+            if (!url) return '';
+            try {
+                const parsedUrl = new URL(url);
+                return parsedUrl.hostname;
+            } catch (e) {
+                return '';
+            }
+        }
+        
+        function getFaviconUrl(url) {
+            const domain = getDomainFromUrl(url);
+            if (!domain) return '';
+            return 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(domain) + '&sz=16';
         }
         
         function getRelativeTime(timestamp) {
@@ -1232,7 +1250,14 @@ $displayName = "Loved Movies";
             
             lovedMoviesData.forEach((movie, index) => {
                 const languageTag = movie.language ? `<span class="category-genre-tag">${escapeHtml(movie.language)}</span>` : '';
-                const websiteTag = movie.website ? `<span class="category-genre-tag category-website-tag">${escapeHtml(movie.website)}</span>` : '';
+                
+                let websiteTag = '';
+                const wsDisplayName = movie.website || getDomainFromUrl(movie.link);
+                if (wsDisplayName) {
+                    const wsFavicon = getFaviconUrl(movie.link);
+                    websiteTag = `<span class="category-genre-tag category-website-tag"><img class="website-tag-favicon" src="${escapeHtml(wsFavicon)}" alt="" onerror="this.style.display='none'">${escapeHtml(wsDisplayName)}</span>`;
+                }
+                
                 const lovedTimeTag = movie.lovedAt ? `<span class="category-genre-tag category-loved-time-tag">${getRelativeTime(movie.lovedAt)}</span>` : '';
                 
                 const tagsHtml = languageTag + websiteTag + lovedTimeTag || '<span class="category-genre-tag" style="opacity: 0.5;">No Info</span>';

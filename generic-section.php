@@ -1,76 +1,5 @@
 <?php
 
-function fetchMultipleGenericSections($requests) {
-    $multiHandle = curl_multi_init();
-    $curlHandles = [];
-    $requestData = [];
-    
-    foreach ($requests as $index => $request) {
-        $websiteName = $request['websiteName'];
-        $website = $request['website'];
-        $page = $request['page'];
-        
-        $url = $website['url'];
-        if ($page > 1) {
-            $url = rtrim($url, '/') . '/page/' . $page . '/';
-        }
-        
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-        
-        curl_multi_add_handle($multiHandle, $ch);
-        $curlHandles[$index] = $ch;
-        $requestData[$index] = $request;
-    }
-    
-    $running = null;
-    do {
-        curl_multi_exec($multiHandle, $running);
-        curl_multi_select($multiHandle);
-    } while ($running > 0);
-    
-    $results = [];
-    
-    foreach ($curlHandles as $index => $ch) {
-        $html = curl_multi_getcontent($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
-        
-        $websiteName = $requestData[$index]['websiteName'];
-        $website = $requestData[$index]['website'];
-        
-        if ($error || $httpCode !== 200) {
-            $results[$index] = [
-                'success' => false,
-                'website' => $websiteName,
-                'error' => $error ?: 'HTTP Error: ' . $httpCode
-            ];
-        } else {
-            $parsedResults = parseGenericSectionResults($html, $website, $websiteName);
-            $results[$index] = [
-                'success' => true,
-                'website' => $websiteName,
-                'results' => $parsedResults,
-                'count' => count($parsedResults)
-            ];
-        }
-        
-        curl_multi_remove_handle($multiHandle, $ch);
-        curl_close($ch);
-    }
-    
-    curl_multi_close($multiHandle);
-    
-    return $results;
-}
-
 function fetchGenericSectionMovies($websiteName, $website, $page = 1) {
     $url = $website['url'];
     if ($page > 1) {
@@ -95,7 +24,6 @@ function fetchGenericSectionMovies($websiteName, $website, $page = 1) {
     if ($error || $httpCode !== 200) {
         return [
             'success' => false,
-            'website' => $websiteName,
             'error' => $error ?: 'HTTP Error: ' . $httpCode
         ];
     }
@@ -104,7 +32,6 @@ function fetchGenericSectionMovies($websiteName, $website, $page = 1) {
     
     return [
         'success' => true,
-        'website' => $websiteName,
         'results' => $results,
         'count' => count($results)
     ];
@@ -188,11 +115,9 @@ function parseGenericSectionResults($html, $website, $websiteName = '') {
             }
         }
         
-        // Extract language and genre from title or metadata
         $language = '';
         $genre = '';
         
-        // Try to extract from metadata or span tags
         $metaNodes = $xpath->query(".//span[contains(@class, 'cat') or contains(@class, 'tag') or contains(@class, 'label') or contains(@class, 'meta') or contains(@class, 'genre') or contains(@class, 'language')]", $article);
         
         foreach ($metaNodes as $meta) {
@@ -208,7 +133,6 @@ function parseGenericSectionResults($html, $website, $websiteName = '') {
             }
         }
         
-        // If no language found from metadata, try to extract from title
         if (empty($language)) {
             if (preg_match('/\b(hindi|english|tamil|telugu|malayalam|bengali|punjabi|marathi|gujarati|kannada|dual\s+audio)\b/i', $title, $matches)) {
                 $language = $matches[1];
@@ -228,4 +152,3 @@ function parseGenericSectionResults($html, $website, $websiteName = '') {
     
     return $results;
 }
-?>

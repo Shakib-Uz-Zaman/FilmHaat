@@ -1,13 +1,12 @@
 # FilmHaat - Multi-Site Movie Search Aggregator
 
 ## Overview
-FilmHaat is a PHP-based web application designed to aggregate movie search results from multiple websites into a single, user-friendly interface. Its primary purpose is to simplify movie discovery by allowing users to search across various sources simultaneously. The project aims to provide a centralized platform for finding movies, inspired by streaming service UIs, with a fully dynamic section and category system that can be configured without touching code. The business vision is to become a go-to platform for movie enthusiasts seeking a consolidated view of available titles across multiple sources.
+FilmHaat is a PHP-based web application that aggregates movie search results from multiple websites into a single, user-friendly interface. It aims to simplify movie discovery by providing a centralized platform inspired by streaming service UIs, featuring a fully dynamic section and category system configurable without code changes. The business vision is to become a primary platform for movie enthusiasts to find titles across various sources.
 
 ## User Preferences
-I want to emphasize a few key preferences for how the agent should interact with this project:
-- No changes to `config.php` unless explicitly requested: This file is central to the application's external integrations, and I want to maintain strict control over its contents.
-- Prioritize UI/UX consistency: When implementing new features or making modifications, ensure the dark theme, color palette, and layout are maintained.
-- Focus on performance: Any new features or modifications should consider performance implications, especially regarding data loading and rendering. Lazy loading and efficient data handling are crucial.
+- No changes to `config.php` unless explicitly requested.
+- Prioritize UI/UX consistency, especially maintaining the dark theme, color palette, and layout.
+- Focus on performance; new features should consider implications for data loading and rendering, utilizing lazy loading and efficient data handling.
 - Detailed explanations for complex changes: If a proposed change involves significant architectural modifications or new design patterns, please provide a detailed explanation of the rationale and impact before implementation.
 - Iterative development: I prefer a step-by-step approach for larger features, allowing for review and feedback at each stage.
 
@@ -15,39 +14,41 @@ I want to emphasize a few key preferences for how the agent should interact with
 The application uses a vanilla PHP backend and vanilla JavaScript/CSS frontend.
 
 ### UI/UX Decisions
-- **Design Style**: Dark theme with a primary Red accent, Background Black, and White & Light Gray text.
-- **Layout**: Prominent hero section with a large search bar, a fixed navigation bar with scroll effects, and a responsive grid for results.
-- **Hero Carousel**: Full-width, auto-rotating carousel for trending movies with dynamic image-based shadow effects, touch/swipe/keyboard navigation, and responsive aspect ratios. Falls back to an animated vector illustration.
-- **Search Placeholder**: Animated search placeholder displaying rotating trending movie titles.
-- **Loading Indicators**: Real-time skeleton animations.
-- **"Next" Cards**: Pagination with "Next" cards displaying blurred random movie posters.
-- **Search Popup Modal**: Modal for search functionality with fade transitions and keyboard/click-outside-to-close support.
-- **Dynamic Section Ordering**: Sections on the main page are dynamically ordered based on `config.php` configurations.
-- **Modal Metadata Display**: Movie modals display Language, Genre, and IMDb Rating above the title with styled badges.
-- **Weekly Top 10**: Dedicated section for most-viewed movies/series with large numbering, using localStorage for client-side tracking.
-- **Responsive Navigation System**: Fixed bottom navigation bar for mobile with gradient accents and blur; header navigation for desktop with hover effects and active states.
+- **Design Style**: Dark theme with a red accent, black background, and white/light gray text.
+- **Layout**: Features a prominent hero section with a large search bar, a fixed navigation bar with scroll effects, and a responsive grid for results.
+- **Hero Carousel**: Full-width, auto-rotating carousel for trending movies with dynamic image effects, comprehensive navigation, and responsive aspect ratios, falling back to an animated vector illustration.
+- **Search Placeholder**: Animated placeholder displaying rotating trending movie titles.
+- **Loading Indicators**: Real-time skeleton animations for content loading.
+- **"Next" Cards**: Pagination with "Next" cards featuring blurred random movie posters.
+- **Search Popup Modal**: Modal with fade transitions and close support.
+- **Dynamic Section Ordering**: Main page sections are dynamically ordered based on `config.php`.
+- **Modal Metadata Display**: Movie modals display Language, Genre, and IMDb Rating with styled badges.
+- **Weekly Top 10**: Dedicated section for most-viewed movies/series with large numbering.
+- **Responsive Navigation System**: Fixed bottom navigation for mobile with gradient accents and blur; header navigation for desktop with hover effects.
 
 ### Technical Implementations
-- **Backend**: Pure PHP 8.4, utilizing cURL for HTTP requests.
-- **Frontend**: Vanilla JavaScript for dynamic content and UI; CSS for styling.
-- **Configuration Management**: `config-manager.php` web UI and `config-api.php` REST API manage website sources and categories, saving changes to `config.php` without a database. Includes automatic backups and reordering functionalities.
+- **Backend**: Pure PHP 8.4, using cURL for HTTP requests.
+- **Frontend**: Vanilla JavaScript for dynamic content; CSS for styling.
+- **Configuration Management**: `config-manager.php` (web UI) and `config-api.php` (REST API) manage website sources and categories, saving to `config.php` without a database. Includes automatic backups and reordering.
 - **Search Logic**: `search.php` for multi-site searches; `search-single.php` for individual site searches.
-- **Dynamic Content System**: Fully automated category and section systems where content (sections, categories, latest, hero carousel) is dynamically generated based on `config.php` entries. Uses `generic-section.php` for all content sections.
-- **Movie Deduplication**: Centralized `deduplicated-sections.php` ensures unique movies across sections.
-- **Staged Loading Strategy**: Three-stage loading process (Priority sequential, Secondary parallel, Category lazy-loaded) for optimized page load.
-- **Weekly Top 10 Tracking**: Server-side view tracking using `data/weekly_views.json` and `api-weekly-top10.php` with file locking and 7-day data cleanup.
-- **Hero Illustration Fallback**: Displays an animated movie-themed vector illustration when hero carousel data is unavailable.
-- **Universal Smart Navigation System**: SessionStorage-based navigation stack mimics browser back/forward behavior, restoring page states using `history.go()` for instant transitions and a native app-like experience.
-- **Dynamic Favicon System**: All pages dynamically use the site logo as the browser favicon and Apple touch icon, updating automatically when the logo is changed.
-- **Icon Font Optimization**: Bottom navigation bar icons use optimized loading with DNS prefetch, preconnect, and font preload directives for instant rendering.
-- **Critical Bottom Nav Loading**: Bottom navigation bar loads before page content using inline critical CSS and HTML placement at the start of `<body>` for immediate rendering.
-- **Progressive Web App (PWA)**: Full PWA support with `manifest.json` and Service Worker (`sw.js`) for installability, offline support (network-first for dynamic PHP, cache-first for static assets), and app-like experience.
+- **Dynamic Content System**: Automated category and section systems based on `config.php` entries, using `generic-section.php`.
+- **Movie Deduplication**: `deduplicated-sections.php` ensures unique movies across sections.
+- **Staged Loading Strategy**: Three-stage loading (Priority sequential, Secondary parallel, Category lazy-loaded) for optimized page load.
+- **Weekly Top 10 Tracking**: Server-side view tracking using `data/weekly_views.json` and `api-weekly-top10.php` with file locking and 7-day cleanup.
+- **Hero Illustration Fallback**: Animated vector illustration displays when carousel data is unavailable.
+- **Universal Smart Navigation System**: `SessionStorage`-based navigation stack for app-like back/forward behavior.
+- **Dynamic Favicon System**: Pages use the site logo as the favicon and Apple touch icon, updating automatically.
+- **Icon Font Optimization**: Bottom navigation bar icons use optimized loading with DNS prefetch, preconnect, and font preload.
+- **Critical Bottom Nav Loading**: Bottom navigation bar loads before page content using inline critical CSS and HTML for immediate rendering.
+- **Progressive Web App (PWA)**: Full PWA support with `manifest.php` and Service Worker (`sw.js`) for installability and offline support.
 - **Security**: XSS protection via HTML escaping, `urlencode()` for input sanitation, and SSL/TLS verification.
+- **Popular Picks System**: Full CRUD management for movie series/franchises, with a dedicated display page (`collection.php`) and a main page carousel section.
 
-### External Dependencies
-The application integrates with various external movie websites for content scraping, dynamically configured in `config.php` via arrays:
-- **$SEARCH_WEBSITES**: Search sources.
-- **$ALL_SECTION_WEBSITES**: Main page section content sources.
-- **$CATEGORIES_WEBSITES**: Category page content sources.
-- **$LATEST_WEBSITES**: Latest section page content sources.
-- **$HERO_CAROUSEL_WEBSITES**: Hero carousel content sources.
+## External Dependencies
+The application integrates with various external movie websites for content, configured dynamically in `config.php` via arrays:
+- **$SEARCH_WEBSITES**: Sources for movie searches.
+- **$ALL_SECTION_WEBSITES**: Sources for main page content sections.
+- **$CATEGORIES_WEBSITES**: Sources for category page content.
+- **$LATEST_WEBSITES**: Sources for the "Latest" section.
+- **$HERO_CAROUSEL_WEBSITES**: Sources for the hero carousel.
+- **$MOVIE_COLLECTIONS_DATA**: Stores movie series/franchise collections data.

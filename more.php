@@ -1,5 +1,6 @@
 <?php 
 require_once 'config.php';
+require_once 'config-helpers.php';
 
 // Get category from URL parameter
 $category = isset($_GET['category']) ? strtoupper($_GET['category']) : '';
@@ -28,7 +29,7 @@ $categoryLower = strtolower($category);
     <title><?php echo htmlspecialchars($displayName); ?> - <?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></title>
     <meta name="description" content="Browse <?php echo htmlspecialchars($displayName); ?> movies and TV shows from multiple websites. Discover content by category - completely free with no sign-up or subscription required.">
     <link rel="stylesheet" href="styles.css">
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.php">
     <script>
         window.SITE_SETTINGS = {
             website_name: <?php echo json_encode($SITE_SETTINGS['website_name']); ?>,
@@ -92,9 +93,6 @@ $categoryLower = strtolower($category);
             transition: opacity 0.1s linear;
         }
         
-        .category-page-subtitle {
-            display: none;
-        }
         
         .category-page-content {
             max-width: 1920px;
@@ -288,7 +286,6 @@ $categoryLower = strtolower($category);
             </button>
         </div>
         <h1 class="category-page-title"><?php echo htmlspecialchars($displayName); ?></h1>
-        <p class="category-page-subtitle">Browse all <?php echo htmlspecialchars($displayName); ?> movies and series</p>
     </div>
 
     <div id="searchPopupModal" class="search-popup-modal" style="display: none;">
@@ -332,11 +329,14 @@ $categoryLower = strtolower($category);
                                             $visibleSearchWebsites = array_filter($SEARCH_WEBSITES, function($website) {
                                                 return !isset($website['hidden']) || $website['hidden'] !== true;
                                             });
-                                            foreach ($visibleSearchWebsites as $websiteName => $website): 
+                                            foreach ($visibleSearchWebsites as $websiteKey => $website): 
+                                            $domain = getDomainFromUrl($website['url']);
+                                            $faviconUrl = getFaviconUrl($website['url']);
                                             ?>
                                             <label class="filter-option">
-                                                <input type="checkbox" class="filter-checkbox" value="<?php echo htmlspecialchars($websiteName); ?>" checked>
-                                                <span><?php echo htmlspecialchars($websiteName); ?></span>
+                                                <input type="checkbox" class="filter-checkbox" value="<?php echo htmlspecialchars($websiteKey); ?>" checked>
+                                                <img class="filter-favicon" src="<?php echo htmlspecialchars($faviconUrl); ?>" alt="" onerror="this.style.display='none'">
+                                                <span><?php echo htmlspecialchars($websiteKey); ?></span>
                                             </label>
                                             <?php endforeach; ?>
                                         </div>
@@ -643,10 +643,22 @@ $categoryLower = strtolower($category);
                 saveToRecentViewed(title, link, image, language, genre, website);
             }
             
+            // Track for weekly top 10
+            if (typeof trackMovieView === 'function') {
+                trackMovieView(title, link, image, language, website);
+            }
+            
             modalTitle.textContent = title;
             modalLink.href = link;
             modalLanguage.textContent = language || '';
-            modalWebsite.textContent = website || '';
+            
+            const faviconUrl = getFaviconUrl(link);
+            const displayName = website || getDomainFromUrl(link);
+            if (displayName && faviconUrl) {
+                modalWebsite.innerHTML = `<img class="modal-favicon" src="${escapeHtml(faviconUrl)}" alt="" onerror="this.style.display='none'"> ${escapeHtml(displayName)}`;
+            } else {
+                modalWebsite.textContent = displayName || '';
+            }
             
             // Update modalLovedBtn with current movie data and state
             const modalLovedBtn = document.getElementById('modalLovedBtn');
@@ -769,6 +781,22 @@ $categoryLower = strtolower($category);
             return div.innerHTML;
         }
         
+        function getDomainFromUrl(url) {
+            if (!url) return '';
+            try {
+                const parsedUrl = new URL(url);
+                return parsedUrl.hostname;
+            } catch (e) {
+                return '';
+            }
+        }
+        
+        function getFaviconUrl(url) {
+            const domain = getDomainFromUrl(url);
+            if (!domain) return '';
+            return 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(domain) + '&sz=16';
+        }
+        
         // Initialize lazy images
         function initializeLazyImages() {
             const lazyImages = document.querySelectorAll('.lazy-image');
@@ -851,7 +879,13 @@ $categoryLower = strtolower($category);
                             const genreTags = genres.map(g => `<span class="category-genre-tag">${escapeHtml(g)}</span>`).join('');
                             
                             const categoryTag = movie.category ? `<span class="category-genre-tag">${escapeHtml(movie.category)}</span>` : '';
-                            const websiteTag = movie.website ? `<span class="category-genre-tag category-website-tag">${escapeHtml(movie.website.toUpperCase())}</span>` : '';
+                            
+                            let websiteTag = '';
+                            const wsDisplayName = movie.website || getDomainFromUrl(movie.link);
+                            if (wsDisplayName) {
+                                const wsFavicon = getFaviconUrl(movie.link);
+                                websiteTag = `<span class="category-genre-tag category-website-tag"><img class="website-tag-favicon" src="${escapeHtml(wsFavicon)}" alt="" onerror="this.style.display='none'">${escapeHtml(wsDisplayName)}</span>`;
+                            }
                             
                             const itemHtml = `
                                 <div class="category-grid-item new-item" 
@@ -859,6 +893,7 @@ $categoryLower = strtolower($category);
                                      data-link="${escapeHtml(movie.link)}" 
                                      data-image="${escapeHtml(movie.image || '')}" 
                                      data-language="${escapeHtml(movie.language || '')}"
+                                     data-website="${escapeHtml(movie.website || '')}"
                                      style="cursor: pointer;">
                                     ${movie.image ? `<img src="${escapeHtml(movie.image)}" alt="${escapeHtml(movie.title)}" class="result-image lazy-image" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22280%22%3E%3Crect fill=%22%23ddd%22 width=%22200%22 height=%22280%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3ENo Image%3C/text%3E%3C/svg%3E'">` : '<div class="result-image"></div>'}
                                     <div class="category-movie-info">
@@ -956,7 +991,13 @@ $categoryLower = strtolower($category);
                 const genreTags = genres.map(g => `<span class="category-genre-tag">${escapeHtml(g)}</span>`).join('');
                 
                 const categoryTag = movie.category ? `<span class="category-genre-tag">${escapeHtml(movie.category)}</span>` : '';
-                const websiteTag = movie.website ? `<span class="category-genre-tag category-website-tag">${escapeHtml(movie.website.toUpperCase())}</span>` : '';
+                
+                let websiteTag = '';
+                const wsDisplayName = movie.website || getDomainFromUrl(movie.link);
+                if (wsDisplayName) {
+                    const wsFavicon = getFaviconUrl(movie.link);
+                    websiteTag = `<span class="category-genre-tag category-website-tag"><img class="website-tag-favicon" src="${escapeHtml(wsFavicon)}" alt="" onerror="this.style.display='none'">${escapeHtml(wsDisplayName)}</span>`;
+                }
                 
                 html += `
                     <div class="category-grid-item" 
@@ -964,6 +1005,7 @@ $categoryLower = strtolower($category);
                          data-link="${escapeHtml(movie.link)}" 
                          data-image="${escapeHtml(movie.image || '')}" 
                          data-language="${escapeHtml(movie.language || '')}"
+                         data-website="${escapeHtml(movie.website || '')}"
                          style="cursor: pointer;">
                         ${movie.image ? `<img src="${escapeHtml(movie.image)}" alt="${escapeHtml(movie.title)}" class="result-image lazy-image" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22280%22%3E%3Crect fill=%22%23ddd%22 width=%22200%22 height=%22280%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2220%22%3ENo Image%3C/text%3E%3C/svg%3E'">` : '<div class="result-image"></div>'}
                         <div class="category-movie-info">

@@ -71,6 +71,7 @@ $csrf_token = generateCSRFToken();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/webp" href="attached_image/logo-image.webp">
     <link rel="apple-touch-icon" href="attached_image/logo-image.webp">
+    <link rel="manifest" href="manifest.php">
     <title>Admin Login - <?php echo htmlspecialchars($SITE_SETTINGS['website_name'] ?? 'FilmHaat'); ?></title>
     <style>
         * {

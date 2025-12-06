@@ -205,19 +205,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
     
     $categoryData = null;
-    $categorySource = '';
+    $isLatestSource = false;
     
     if (!empty($source) && $source === 'LATEST_WEBSITES') {
         if (isset($LATEST_WEBSITES[$categoryKey])) {
             $categoryData = $LATEST_WEBSITES[$categoryKey];
-            $categorySource = 'LATEST_WEBSITES';
+            $isLatestSource = true;
         }
     } elseif (isset($CATEGORIES_WEBSITES[$categoryKey])) {
         $categoryData = $CATEGORIES_WEBSITES[$categoryKey];
-        $categorySource = 'CATEGORIES_WEBSITES';
     } elseif (isset($ALL_SECTION_WEBSITES[$categoryKey])) {
         $categoryData = $ALL_SECTION_WEBSITES[$categoryKey];
-        $categorySource = 'ALL_SECTION_WEBSITES';
     }
     
     if ($categoryData === null) {
@@ -249,7 +247,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
     }
     
-    if ($categorySource !== 'LATEST_WEBSITES') {
+    if (!$isLatestSource) {
         shuffle($allResults);
     }
     $limit = ($page === 1) ? 16 : 8;
@@ -262,11 +260,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         'results' => $allResults,
         'count' => count($allResults),
         'page' => $page
-    ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    ], JSON_UNESCAPED_UNICODE);
 } else {
     echo json_encode([
         'success' => false,
         'error' => 'Invalid request method'
     ]);
 }
-?>

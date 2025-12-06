@@ -3,13 +3,11 @@
 require_once 'auth-check.php';
 
 header('Cache-Control: no-cache, no-store, must-revalidate');
-header('Pragma: no-cache');
-header('Expires: 0');
 
 require_once 'config.php';
 
 function getCurrentConfig() {
-    global $ALL_SECTION_WEBSITES, $CATEGORIES_WEBSITES, $LATEST_WEBSITES, $SEARCH_WEBSITES, $HERO_CAROUSEL_WEBSITES, $HERO_CAROUSEL_MANUAL_MOVIES, $SITE_SETTINGS;
+    global $ALL_SECTION_WEBSITES, $CATEGORIES_WEBSITES, $LATEST_WEBSITES, $SEARCH_WEBSITES, $HERO_CAROUSEL_WEBSITES, $HERO_CAROUSEL_MANUAL_MOVIES, $MOVIE_COLLECTIONS_DATA, $SITE_SETTINGS;
     return [
         'ALL_SECTION_WEBSITES' => $ALL_SECTION_WEBSITES,
         'CATEGORIES_WEBSITES' => $CATEGORIES_WEBSITES,
@@ -17,6 +15,7 @@ function getCurrentConfig() {
         'SEARCH_WEBSITES' => $SEARCH_WEBSITES,
         'HERO_CAROUSEL_WEBSITES' => $HERO_CAROUSEL_WEBSITES,
         'HERO_CAROUSEL_MANUAL_MOVIES' => $HERO_CAROUSEL_MANUAL_MOVIES,
+        'MOVIE_COLLECTIONS_DATA' => $MOVIE_COLLECTIONS_DATA,
         'SITE_SETTINGS' => $SITE_SETTINGS
     ];
 }
@@ -30,6 +29,7 @@ $config = getCurrentConfig();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/webp" href="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>">
     <link rel="apple-touch-icon" href="<?php echo htmlspecialchars($SITE_SETTINGS['logo_image']); ?>">
+    <link rel="manifest" href="manifest.php">
     <title>Config Manager - <?php echo htmlspecialchars($SITE_SETTINGS['website_name']); ?></title>
     <style>
         * {
@@ -1494,8 +1494,9 @@ $config = getCurrentConfig();
                     $displayName = isset($websites['display_name']) ? $websites['display_name'] : $section;
                     foreach($websites as $name => $details): 
                         if ($name === 'display_name') continue;
-                        $isBuiltIn = ($section === 'WEEKLY_TOP_10' || $section === 'SEARCH_LINKS');
+                        $isBuiltIn = ($section === 'WEEKLY_TOP_10' || $section === 'SEARCH_LINKS' || $section === 'MOVIE_COLLECTIONS');
                         $isSearchLinks = ($section === 'SEARCH_LINKS');
+                        $isMovieCollections = ($section === 'MOVIE_COLLECTIONS');
                         $detailsWithDisplayName = array_merge($details, ['display_name' => $displayName]);
                         $isHidden = isset($details['hidden']) && $details['hidden'];
                 ?>
@@ -1526,6 +1527,157 @@ $config = getCurrentConfig();
                                 <button class="delete-btn" onclick="resetWeeklyViews()" style="padding: 8px 16px; font-size: 13px;">
                                     Reset Data
                                 </button>
+                            </div>
+                            <?php endif; ?>
+                            <?php if ($isMovieCollections): ?>
+                            <?php 
+                            $collectionKeys = array_keys($config['MOVIE_COLLECTIONS_DATA']);
+                            $collectionCount = count($collectionKeys);
+                            ?>
+                            <div style="margin-top: 12px; padding: 12px; background: #f3e8ff; border-left: 3px solid #9333ea; border-radius: 6px;">
+                                <p style="color: #581c87; font-size: 13px; line-height: 1.5; margin-bottom: 10px;">
+                                    <strong>POPULAR PICKS:</strong> Organize movie series like Bahubali, Pushpa, etc. into collections.
+                                </p>
+                                <button class="add-btn" onclick="openCreateCollectionModal()" style="padding: 8px 16px; font-size: 13px;">+ Create Collection</button>
+                            </div>
+                            
+                            <div style="margin-top: 16px;">
+                                <?php if ($collectionCount === 0): ?>
+                                    <div style="text-align: center; padding: 40px; color: #64748b; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" style="margin-bottom: 16px;">
+                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                                            <path d="M21 15l-5-5L5 21"/>
+                                        </svg>
+                                        <p style="font-size: 15px; margin-bottom: 8px;">No collections yet</p>
+                                        <p style="font-size: 13px;">Create your first popular pick to organize movie series like Bahubali, Pushpa, etc.</p>
+                                    </div>
+                                <?php else: ?>
+                                    <div style="position: relative;">
+                                        <button 
+                                            onclick="scrollCollectionCarousel('left')"
+                                            style="position: absolute; left: -15px; top: 50%; transform: translateY(-50%); z-index: 10; width: 36px; height: 36px; background: #6366f1; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(99,102,241,0.4); transition: all 0.2s ease;"
+                                            onmouseover="this.style.background='#4f46e5'; this.style.transform='translateY(-50%) scale(1.1)'"
+                                            onmouseout="this.style.background='#6366f1'; this.style.transform='translateY(-50%)'"
+                                        >
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="15 18 9 12 15 6"></polyline>
+                                            </svg>
+                                        </button>
+                                        
+                                        <div id="collection-carousel" style="display: flex; gap: 16px; overflow-x: auto; scroll-behavior: smooth; padding: 10px 30px; scrollbar-width: none; -ms-overflow-style: none;">
+                                            <style>#collection-carousel::-webkit-scrollbar { display: none; }</style>
+                                        <?php 
+                                            $collectionIndex = 0;
+                                            foreach($config['MOVIE_COLLECTIONS_DATA'] as $collectionKey => $collection): 
+                                                $collectionDisplayName = isset($collection['display_name']) ? $collection['display_name'] : $collectionKey;
+                                                $collectionIsHidden = isset($collection['hidden']) && $collection['hidden'];
+                                                $movieCount = isset($collection['movies']) ? count($collection['movies']) : 0;
+                                                $firstMovie = isset($collection['movies'][0]) ? $collection['movies'][0] : null;
+                                                $posterImage = '';
+                                                if ($firstMovie && !empty($firstMovie['image'])) {
+                                                    $posterImage = $firstMovie['image'];
+                                                } elseif (!empty($collection['cover_image'])) {
+                                                    $posterImage = $collection['cover_image'];
+                                                }
+                                                $collectionDataJson = htmlspecialchars(json_encode($collection), ENT_QUOTES, 'UTF-8');
+                                        ?>
+                                            <div class="collection-poster-card" data-collection-key="<?php echo $collectionKey; ?>" data-collection-index="<?php echo $collectionIndex; ?>" style="position: relative; flex: 0 0 140px; <?php echo $collectionIsHidden ? 'opacity: 0.5;' : ''; ?>">
+                                                <div style="position: relative; width: 140px; height: 210px; background: #1a1a2e; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer;" onclick="openCollectionManageModal('<?php echo $collectionKey; ?>')">
+                                                    <?php if ($posterImage): ?>
+                                                        <img 
+                                                            src="<?php echo htmlspecialchars($posterImage); ?>" 
+                                                            alt="<?php echo htmlspecialchars($collectionDisplayName); ?>"
+                                                            style="width: 100%; height: 100%; object-fit: cover; display: block;"
+                                                            onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22300%22%3E%3Crect fill=%22%231a1a2e%22 width=%22200%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%236366f1%22 font-family=%22sans-serif%22 font-size=%2216%22%3ENo Image%3C/text%3E%3C/svg%3E'"
+                                                        >
+                                                    <?php else: ?>
+                                                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);">
+                                                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="1.5">
+                                                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                                                <path d="M21 15l-5-5L5 21"/>
+                                                            </svg>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                    
+                                                    <button 
+                                                        onclick="event.stopPropagation(); openCollectionManageModal('<?php echo $collectionKey; ?>')"
+                                                        style="position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; background: rgba(0,0,0,0.7); border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;"
+                                                        onmouseover="this.style.background='rgba(99,102,241,0.9)'"
+                                                        onmouseout="this.style.background='rgba(0,0,0,0.7)'"
+                                                        title="Manage Collection"
+                                                    >
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                                        </svg>
+                                                    </button>
+                                                    
+                                                    <?php if ($collectionIsHidden): ?>
+                                                        <div style="position: absolute; top: 8px; left: 8px; background: rgba(245,158,11,0.9); color: white; font-size: 9px; font-weight: 600; padding: 3px 6px; border-radius: 4px;">
+                                                            Hidden
+                                                        </div>
+                                                    <?php endif; ?>
+                                                    
+                                                    <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.9)); padding: 30px 10px 10px;">
+                                                        <div style="font-size: 13px; color: white; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                            <?php echo htmlspecialchars($collectionDisplayName); ?>
+                                                        </div>
+                                                        <div style="font-size: 10px; color: rgba(255,255,255,0.7); margin-top: 2px;">
+                                                            <?php echo $movieCount; ?> movies
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div style="display: flex; justify-content: center; gap: 6px; margin-top: 8px;">
+                                                    <?php $isFirstCollection = ($collectionIndex === 0); ?>
+                                                    <button 
+                                                        <?php if (!$isFirstCollection): ?>onclick="moveCollection('<?php echo $collectionKey; ?>', 'up')"<?php endif; ?>
+                                                        style="width: 32px; height: 28px; background: <?php echo $isFirstCollection ? '#e2e8f0' : '#f1f5f9'; ?>; border: 1px solid #e2e8f0; border-radius: 6px; cursor: <?php echo $isFirstCollection ? 'not-allowed' : 'pointer'; ?>; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; opacity: <?php echo $isFirstCollection ? '0.4' : '1'; ?>;"
+                                                        <?php if (!$isFirstCollection): ?>
+                                                        onmouseover="this.style.background='#6366f1'; this.style.borderColor='#6366f1'; this.querySelector('svg').style.stroke='white'"
+                                                        onmouseout="this.style.background='#f1f5f9'; this.style.borderColor='#e2e8f0'; this.querySelector('svg').style.stroke='#64748b'"
+                                                        <?php endif; ?>
+                                                        title="Move Left"
+                                                        <?php echo $isFirstCollection ? 'disabled' : ''; ?>
+                                                    >
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                            <polyline points="15 18 9 12 15 6"></polyline>
+                                                        </svg>
+                                                    </button>
+                                                    <?php $isLastCollection = ($collectionIndex === $collectionCount - 1); ?>
+                                                    <button 
+                                                        <?php if (!$isLastCollection): ?>onclick="moveCollection('<?php echo $collectionKey; ?>', 'down')"<?php endif; ?>
+                                                        style="width: 32px; height: 28px; background: <?php echo $isLastCollection ? '#e2e8f0' : '#f1f5f9'; ?>; border: 1px solid #e2e8f0; border-radius: 6px; cursor: <?php echo $isLastCollection ? 'not-allowed' : 'pointer'; ?>; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; opacity: <?php echo $isLastCollection ? '0.4' : '1'; ?>;"
+                                                        <?php if (!$isLastCollection): ?>
+                                                        onmouseover="this.style.background='#6366f1'; this.style.borderColor='#6366f1'; this.querySelector('svg').style.stroke='white'"
+                                                        onmouseout="this.style.background='#f1f5f9'; this.style.borderColor='#e2e8f0'; this.querySelector('svg').style.stroke='#64748b'"
+                                                        <?php endif; ?>
+                                                        title="Move Right"
+                                                        <?php echo $isLastCollection ? 'disabled' : ''; ?>
+                                                    >
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                            <polyline points="9 18 15 12 9 6"></polyline>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        <?php $collectionIndex++; endforeach; ?>
+                                        </div>
+                                        
+                                        <button 
+                                            onclick="scrollCollectionCarousel('right')"
+                                            style="position: absolute; right: -15px; top: 50%; transform: translateY(-50%); z-index: 10; width: 36px; height: 36px; background: #6366f1; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(99,102,241,0.4); transition: all 0.2s ease;"
+                                            onmouseover="this.style.background='#4f46e5'; this.style.transform='translateY(-50%) scale(1.1)'"
+                                            onmouseout="this.style.background='#6366f1'; this.style.transform='translateY(-50%)'"
+                                        >
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="9 18 15 12 9 6"></polyline>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                             <?php endif; ?>
                             <?php if ($isSearchLinks): ?>
@@ -1928,6 +2080,7 @@ $config = getCurrentConfig();
 
     <script>
         window.heroManualMovies = <?php echo json_encode($config['HERO_CAROUSEL_MANUAL_MOVIES']); ?>;
+        window.movieCollections = <?php echo json_encode($config['MOVIE_COLLECTIONS_DATA']); ?>;
         
         let currentAction = 'add';
         let currentConfigType = '';
@@ -2802,6 +2955,11 @@ $config = getCurrentConfig();
             }
         }
 
+        let heroSearchState = {
+            query: '',
+            websitePages: {}
+        };
+
         async function searchMoviesForHero() {
             const searchInput = document.getElementById('hero-movie-search');
             const query = searchInput.value.trim();
@@ -2810,6 +2968,11 @@ $config = getCurrentConfig();
                 showAlert('Please enter a search query', 'error');
                 return;
             }
+            
+            heroSearchState = {
+                query: query,
+                websitePages: {}
+            };
             
             const resultsDiv = document.getElementById('hero-search-results');
             const contentDiv = document.getElementById('hero-search-results-content');
@@ -2832,52 +2995,35 @@ $config = getCurrentConfig();
                 data.results.forEach(websiteResult => {
                     if (websiteResult.success && websiteResult.results && websiteResult.results.length > 0) {
                         hasResults = true;
+                        const websiteName = websiteResult.website;
+                        const safeWebsiteId = websiteName.replace(/[^a-zA-Z0-9]/g, '_');
+                        
+                        heroSearchState.websitePages[websiteName] = {
+                            page: websiteResult.page || 1,
+                            hasMore: websiteResult.hasMore || false
+                        };
                         
                         resultsHTML += `
                             <div style="margin-bottom: 24px;">
-                                <h5 style="color: #1a202c; font-size: 13px; font-weight: 600; margin-bottom: 12px; padding-left: 4px;">${websiteResult.website}</h5>
-                                <div style="display: flex; gap: 12px; overflow-x: auto; scroll-behavior: smooth; padding: 4px 0;">
+                                <h5 style="color: #1a202c; font-size: 13px; font-weight: 600; margin-bottom: 12px; padding-left: 4px;">${websiteName}</h5>
+                                <div style="display: flex; gap: 12px; overflow-x: auto; scroll-behavior: smooth; padding: 4px 0; align-items: center;" id="hero-movies-${safeWebsiteId}">
                         `;
                         
-                        websiteResult.results.forEach((movie, index) => {
-                            if (index < 10) {
-                                const isAdded = window.heroManualMovies && window.heroManualMovies.some(m => m.link === movie.link);
-                                
-                                resultsHTML += `
-                                    <div style="flex: 0 0 auto; width: 110px; display: flex; flex-direction: column; gap: 6px;">
-                                        <div style="position: relative; width: 110px; background: #f8f9fa; border-radius: 6px; overflow: hidden; cursor: pointer; transition: all 0.3s ease;">
-                                            <img 
-                                                src="${movie.image || ''}" 
-                                                alt="${movie.title}"
-                                                style="width: 110px; height: 165px; object-fit: cover; display: block;"
-                                                onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22300%22%3E%3Crect fill=%22%23e2e8f0%22 width=%22200%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%2394a3b8%22 font-family=%22sans-serif%22 font-size=%2216%22%3ENo Image%3C/text%3E%3C/svg%3E'"
-                                            >
-                                        </div>
-                                        <div style="padding: 0 2px;">
-                                            <div style="font-size: 11px; color: #1a202c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; margin-bottom: 4px;">${movie.title}</div>
-                                            <div style="font-size: 9px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px;">
-                                                ${movie.language ? `${movie.language}` : ''}
-                                            </div>
-                                            ${isAdded ? `
-                                                <button 
-                                                    disabled
-                                                    style="width: 100%; padding: 5px 10px; background: #94a3b8; color: white; border: none; border-radius: 4px; cursor: not-allowed; font-size: 10px; font-weight: 500; opacity: 0.6;"
-                                                >
-                                                    Added
-                                                </button>
-                                            ` : `
-                                                <button 
-                                                    onclick='addMovieToHeroCarousel(${JSON.stringify(movie).replace(/'/g, "&apos;")})'
-                                                    style="width: 100%; padding: 5px 10px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 500;"
-                                                >
-                                                    Add
-                                                </button>
-                                            `}
-                                        </div>
-                                    </div>
-                                `;
-                            }
+                        websiteResult.results.forEach((movie) => {
+                            resultsHTML += renderHeroMovieCard(movie);
                         });
+                        
+                        if (websiteResult.hasMore) {
+                            resultsHTML += `
+                                <div style="flex: 0 0 auto; display: flex; align-items: center;">
+                                    <button onclick="loadMoreHeroMovies('${websiteName}')" 
+                                        id="hero-load-more-${safeWebsiteId}"
+                                        style="background: #6366f1; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 500; white-space: nowrap; height: 40px;">
+                                        Next &rarr;
+                                    </button>
+                                </div>
+                            `;
+                        }
                         
                         resultsHTML += `
                                 </div>
@@ -2895,6 +3041,100 @@ $config = getCurrentConfig();
                 
             } catch (error) {
                 contentDiv.innerHTML = `<div style="text-align: center; padding: 20px; color: #ef4444;">Error: ${error.message}</div>`;
+            }
+        }
+
+        function renderHeroMovieCard(movie) {
+            const isAdded = window.heroManualMovies && window.heroManualMovies.some(m => m.link === movie.link);
+            const movieJson = JSON.stringify(movie).replace(/'/g, "&apos;");
+            
+            return `
+                <div style="flex: 0 0 auto; width: 110px; display: flex; flex-direction: column; gap: 6px;">
+                    <div style="position: relative; width: 110px; background: #f8f9fa; border-radius: 6px; overflow: hidden; cursor: pointer; transition: all 0.3s ease;">
+                        <img 
+                            src="${movie.image || ''}" 
+                            alt="${movie.title}"
+                            style="width: 110px; height: 165px; object-fit: cover; display: block;"
+                            onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22300%22%3E%3Crect fill=%22%23e2e8f0%22 width=%22200%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%2394a3b8%22 font-family=%22sans-serif%22 font-size=%2216%22%3ENo Image%3C/text%3E%3C/svg%3E'"
+                        >
+                    </div>
+                    <div style="padding: 0 2px;">
+                        <div style="font-size: 11px; color: #1a202c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; margin-bottom: 4px;">${movie.title}</div>
+                        <div style="font-size: 9px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px;">
+                            ${movie.language ? `${movie.language}` : ''}
+                        </div>
+                        ${isAdded ? `
+                            <button 
+                                disabled
+                                style="width: 100%; padding: 5px 10px; background: #94a3b8; color: white; border: none; border-radius: 4px; cursor: not-allowed; font-size: 10px; font-weight: 500; opacity: 0.6;"
+                            >
+                                Added
+                            </button>
+                        ` : `
+                            <button 
+                                onclick='addMovieToHeroCarousel(${movieJson})'
+                                style="width: 100%; padding: 5px 10px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 500;"
+                            >
+                                Add
+                            </button>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadMoreHeroMovies(websiteName) {
+            const state = heroSearchState.websitePages[websiteName];
+            if (!state || !state.hasMore) return;
+            
+            const nextPage = state.page + 1;
+            const safeWebsiteId = websiteName.replace(/[^a-zA-Z0-9]/g, '_');
+            const loadMoreBtn = document.getElementById(`hero-load-more-${safeWebsiteId}`);
+            const originalText = loadMoreBtn.innerHTML;
+            loadMoreBtn.innerHTML = 'Loading...';
+            loadMoreBtn.disabled = true;
+            
+            try {
+                const response = await fetch(`search-single.php?query=${encodeURIComponent(heroSearchState.query)}&website=${encodeURIComponent(websiteName)}&page=${nextPage}`);
+                const data = await response.json();
+                
+                if (!data.success || !data.results || data.results.length === 0) {
+                    loadMoreBtn.style.display = 'none';
+                    state.hasMore = false;
+                    return;
+                }
+                
+                state.page = nextPage;
+                state.hasMore = data.hasMore || false;
+                
+                const moviesContainer = document.getElementById(`hero-movies-${safeWebsiteId}`);
+                
+                let newMoviesHTML = '';
+                data.results.forEach((movie) => {
+                    newMoviesHTML += renderHeroMovieCard(movie);
+                });
+                
+                loadMoreBtn.parentElement.remove();
+                
+                moviesContainer.insertAdjacentHTML('beforeend', newMoviesHTML);
+                
+                if (data.hasMore) {
+                    const nextBtnHTML = `
+                        <div style="flex: 0 0 auto; display: flex; align-items: center;">
+                            <button onclick="loadMoreHeroMovies('${websiteName}')" 
+                                id="hero-load-more-${safeWebsiteId}"
+                                style="background: #6366f1; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 500; white-space: nowrap; height: 40px;">
+                                Next &rarr;
+                            </button>
+                        </div>
+                    `;
+                    moviesContainer.insertAdjacentHTML('beforeend', nextBtnHTML);
+                }
+                
+            } catch (error) {
+                loadMoreBtn.innerHTML = originalText;
+                loadMoreBtn.disabled = false;
+                showAlert('Error loading more movies: ' + error.message, 'error');
             }
         }
 
@@ -2991,6 +3231,1172 @@ $config = getCurrentConfig();
                 showAlert('Error toggling visibility: ' + error.message, 'error');
                 toggleBtn.disabled = false;
                 toggleBtn.innerHTML = originalContent;
+            }
+        }
+
+        function openCreateCollectionModal() {
+            const modalHtml = `
+                <div id="collection-modal" class="modal active" style="display: flex;">
+                    <div class="modal-content" style="max-width: 500px;">
+                        <div class="modal-header">
+                            <h2 class="modal-title">Create New Collection</h2>
+                            <button class="close-btn" onclick="closeCollectionModal()">&times;</button>
+                        </div>
+                        <form onsubmit="createCollection(event)">
+                            <div class="form-group">
+                                <label class="form-label">Collection Name (e.g., Bahubali, Pushpa):</label>
+                                <input type="text" id="collection-name" class="form-input" required placeholder="Enter collection name">
+                            </div>
+                            <button type="submit" class="add-btn" style="width: 100%; padding: 14px; font-size: 15px;">Create Collection</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        function openCollectionManageModal(collectionKey) {
+            selectedMoviesForCollection = [];
+            selectedMovieIndexesForRemoval = [];
+            const collection = window.movieCollections[collectionKey];
+            if (!collection) {
+                showAlert('Collection not found', 'error');
+                return;
+            }
+            
+            const displayName = collection.display_name || collectionKey;
+            const movieCount = collection.movies ? collection.movies.length : 0;
+            const isHidden = collection.hidden || false;
+            
+            let moviesHtml = '';
+            const totalMovies = collection.movies ? collection.movies.length : 0;
+            if (collection.movies && collection.movies.length > 0) {
+                collection.movies.forEach((movie, index) => {
+                    const movieJson = JSON.stringify(movie).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+                    const isFirst = index === 0;
+                    const isLast = index === totalMovies - 1;
+                    moviesHtml += `
+                        <div class="collection-manage-movie-item" style="display: flex; gap: 12px; padding: 12px; background: #f8fafc; border-radius: 10px; margin-bottom: 10px; align-items: center;">
+                            <div 
+                                id="remove-checkbox-${index}"
+                                onclick="toggleMovieRemoveSelection('${collectionKey}', ${index})"
+                                style="flex-shrink: 0; width: 22px; height: 22px; background: rgba(255,255,255,0.9); border: 2px solid #cbd5e1; border-radius: 5px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;"
+                            ></div>
+                            <div style="display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
+                                <button 
+                                    ${isFirst ? '' : `onclick="moveMovieInCollection('${collectionKey}', ${index}, 'up')"`}
+                                    style="width: 28px; height: 24px; background: ${isFirst ? '#e2e8f0' : '#f1f5f9'}; border: 1px solid #e2e8f0; border-radius: 5px; cursor: ${isFirst ? 'not-allowed' : 'pointer'}; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; opacity: ${isFirst ? '0.4' : '1'};"
+                                    ${isFirst ? 'disabled' : `onmouseover="this.style.background='#6366f1'; this.style.borderColor='#6366f1'; this.querySelector('svg').style.stroke='white'" onmouseout="this.style.background='#f1f5f9'; this.style.borderColor='#e2e8f0'; this.querySelector('svg').style.stroke='#64748b'"`}
+                                    title="Move Up"
+                                >
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="18 15 12 9 6 15"></polyline>
+                                    </svg>
+                                </button>
+                                <button 
+                                    ${isLast ? '' : `onclick="moveMovieInCollection('${collectionKey}', ${index}, 'down')"`}
+                                    style="width: 28px; height: 24px; background: ${isLast ? '#e2e8f0' : '#f1f5f9'}; border: 1px solid #e2e8f0; border-radius: 5px; cursor: ${isLast ? 'not-allowed' : 'pointer'}; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; opacity: ${isLast ? '0.4' : '1'};"
+                                    ${isLast ? 'disabled' : `onmouseover="this.style.background='#6366f1'; this.style.borderColor='#6366f1'; this.querySelector('svg').style.stroke='white'" onmouseout="this.style.background='#f1f5f9'; this.style.borderColor='#e2e8f0'; this.querySelector('svg').style.stroke='#64748b'"`}
+                                    title="Move Down"
+                                >
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div style="flex-shrink: 0; width: 60px; height: 90px; border-radius: 6px; overflow: hidden; background: #e2e8f0;">
+                                <img 
+                                    src="${movie.image || ''}" 
+                                    alt="${movie.title}"
+                                    style="width: 100%; height: 100%; object-fit: cover;"
+                                    onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22300%22%3E%3Crect fill=%22%23e2e8f0%22 width=%22200%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%2394a3b8%22 font-family=%22sans-serif%22 font-size=%2212%22%3ENo Image%3C/text%3E%3C/svg%3E'"
+                                >
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-size: 13px; font-weight: 500; color: #1a202c; margin-bottom: 4px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                    ${movie.title}
+                                </div>
+                                <div style="font-size: 11px; color: #64748b;">
+                                    ${movie.website || ''}
+                                </div>
+                            </div>
+                            <button 
+                                onclick="deleteMovieFromCollectionInModal('${collectionKey}', ${index})"
+                                style="flex-shrink: 0; padding: 8px 14px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s ease;"
+                                onmouseover="this.style.background='#dc2626'"
+                                onmouseout="this.style.background='#ef4444'"
+                            >
+                                Remove
+                            </button>
+                        </div>
+                    `;
+                });
+            } else {
+                moviesHtml = `
+                    <div style="text-align: center; padding: 30px; color: #94a3b8; font-size: 13px;">
+                        No movies in this collection yet. Use the search above to add movies.
+                    </div>
+                `;
+            }
+            
+            const modalHtml = `
+                <div id="collection-manage-modal" class="modal active" style="display: flex; z-index: 1001;">
+                    <div class="modal-content" style="max-width: 600px; max-height: 90vh; display: flex; flex-direction: column;">
+                        <div class="modal-header" style="flex-shrink: 0;">
+                            <div>
+                                <h2 class="modal-title" style="margin-bottom: 4px;">${displayName}</h2>
+                                <div style="font-size: 13px; color: #64748b;">${movieCount} movies</div>
+                            </div>
+                            <button class="close-btn" onclick="closeCollectionManageModal()">&times;</button>
+                        </div>
+                        
+                        <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; flex-shrink: 0;">
+                            <button 
+                                onclick="toggleCollectionVisibilityFromModal('${collectionKey}')"
+                                style="padding: 10px 18px; background: #f59e0b; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s ease;"
+                                onmouseover="this.style.background='#d97706'"
+                                onmouseout="this.style.background='#f59e0b'"
+                            >
+                                ${isHidden ? 'Show' : 'Hide'}
+                            </button>
+                            <button 
+                                onclick="closeCollectionManageModal(); openEditCollectionModal('${collectionKey}', '${displayName.replace(/'/g, "\\'")}', '')"
+                                style="padding: 10px 18px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s ease;"
+                                onmouseover="this.style.background='#2563eb'"
+                                onmouseout="this.style.background='#3b82f6'"
+                            >
+                                Edit
+                            </button>
+                            <button 
+                                onclick="deleteCollectionFromModal('${collectionKey}')"
+                                style="padding: 10px 18px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s ease;"
+                                onmouseover="this.style.background='#dc2626'"
+                                onmouseout="this.style.background='#ef4444'"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                        
+                        <div style="margin-bottom: 16px; flex-shrink: 0;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <input 
+                                    type="text" 
+                                    id="collection-manage-search" 
+                                    placeholder="Search movie to add..." 
+                                    style="flex: 1; padding: 12px 16px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s ease;"
+                                    onfocus="this.style.borderColor='#6366f1'"
+                                    onblur="this.style.borderColor='#e2e8f0'"
+                                    onkeypress="if(event.key === 'Enter') searchMoviesForCollectionModal('${collectionKey}')"
+                                >
+                                <button 
+                                    onclick="searchMoviesForCollectionModal('${collectionKey}')"
+                                    style="padding: 12px 20px; background: #6366f1; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s ease;"
+                                    onmouseover="this.style.background='#4f46e5'"
+                                    onmouseout="this.style.background='#6366f1'"
+                                >
+                                    Search
+                                </button>
+                            </div>
+                            <div id="collection-manage-search-results" style="display: none; margin-top: 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; max-height: 250px; overflow-y: auto;"></div>
+                            <div id="collection-selected-bar" style="display: none; margin-top: 10px; padding: 10px 14px; background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+                                <span id="collection-selected-count" style="font-size: 13px; color: #4338ca; font-weight: 500;">0 selected</span>
+                                <div style="display: flex; gap: 8px;">
+                                    <button onclick="clearSelectedMovies('${collectionKey}')" style="padding: 6px 12px; background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">Clear</button>
+                                    <button onclick="addSelectedMoviesToCollection('${collectionKey}')" style="padding: 6px 12px; background: #6366f1; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">Add Selected</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="collection-remove-bar" style="display: none; margin-bottom: 10px; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; align-items: center; justify-content: space-between; flex-shrink: 0;">
+                            <span id="collection-remove-count" style="font-size: 13px; color: #dc2626; font-weight: 500;">0 selected</span>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="clearRemoveSelection('${collectionKey}')" style="padding: 6px 12px; background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">Clear</button>
+                                <button onclick="removeSelectedMoviesFromCollection('${collectionKey}')" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">Remove Selected</button>
+                            </div>
+                        </div>
+                        
+                        <div style="flex: 1; overflow-y: auto; padding-right: 4px;">
+                            <div id="collection-manage-movies-list">
+                                ${moviesHtml}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        function closeCollectionManageModal() {
+            const modal = document.getElementById('collection-manage-modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        let selectedMoviesForCollection = [];
+        let selectedMovieIndexesForRemoval = [];
+
+        function toggleMovieRemoveSelection(collectionKey, index) {
+            const checkbox = document.getElementById(`remove-checkbox-${index}`);
+            const existingIndex = selectedMovieIndexesForRemoval.indexOf(index);
+            
+            if (existingIndex > -1) {
+                selectedMovieIndexesForRemoval.splice(existingIndex, 1);
+                checkbox.style.background = 'rgba(255,255,255,0.9)';
+                checkbox.style.borderColor = '#cbd5e1';
+                checkbox.innerHTML = '';
+            } else {
+                selectedMovieIndexesForRemoval.push(index);
+                checkbox.style.background = '#ef4444';
+                checkbox.style.borderColor = '#ef4444';
+                checkbox.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20,6 9,17 4,12"></polyline></svg>';
+            }
+            
+            updateRemoveSelectionBar(collectionKey);
+        }
+
+        function updateRemoveSelectionBar(collectionKey) {
+            const bar = document.getElementById('collection-remove-bar');
+            const countSpan = document.getElementById('collection-remove-count');
+            const count = selectedMovieIndexesForRemoval.length;
+            
+            if (count > 0) {
+                bar.style.display = 'flex';
+                countSpan.textContent = count + ' selected';
+            } else {
+                bar.style.display = 'none';
+            }
+        }
+
+        function clearRemoveSelection(collectionKey) {
+            selectedMovieIndexesForRemoval.forEach(index => {
+                const cb = document.getElementById(`remove-checkbox-${index}`);
+                if (cb) {
+                    cb.style.background = 'rgba(255,255,255,0.9)';
+                    cb.style.borderColor = '#cbd5e1';
+                    cb.innerHTML = '';
+                }
+            });
+            selectedMovieIndexesForRemoval = [];
+            updateRemoveSelectionBar(collectionKey);
+        }
+
+        async function removeSelectedMoviesFromCollection(collectionKey) {
+            if (selectedMovieIndexesForRemoval.length === 0) {
+                showAlert('Please select at least one movie to remove', 'error');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to remove ${selectedMovieIndexesForRemoval.length} movie(s) from this collection?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('config-api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'delete_movies_from_collection',
+                        collection_key: collectionKey,
+                        movie_indexes: selectedMovieIndexesForRemoval
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(result.message || 'Movies removed successfully!', 'success');
+                    selectedMovieIndexesForRemoval = [];
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    showAlert(result.message || 'Error removing movies', 'error');
+                }
+            } catch (error) {
+                showAlert('Error removing movies: ' + error.message, 'error');
+            }
+        }
+
+        let collectionSearchState = {
+            query: '',
+            websitePages: {},
+            collectionKey: ''
+        };
+        let globalMovieIndex = 0;
+
+        async function searchMoviesForCollectionModal(collectionKey) {
+            const searchInput = document.getElementById('collection-manage-search');
+            const query = searchInput.value.trim();
+            
+            if (!query) {
+                showAlert('Please enter a search query', 'error');
+                return;
+            }
+            
+            collectionSearchState = {
+                query: query,
+                websitePages: {},
+                collectionKey: collectionKey
+            };
+            globalMovieIndex = 0;
+            
+            const resultsDiv = document.getElementById('collection-manage-search-results');
+            resultsDiv.innerHTML = '<div style="text-align: center; padding: 15px; color: #64748b;">Searching...</div>';
+            resultsDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch(`search.php?query=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                if (!data.success || !data.results || data.results.length === 0) {
+                    resultsDiv.innerHTML = '<div style="text-align: center; padding: 15px; color: #94a3b8;">No movies found. Try a different search term.</div>';
+                    return;
+                }
+                
+                let hasResults = false;
+                let resultsHTML = '<div style="display: flex; justify-content: flex-end; margin-bottom: 8px;"><button onclick="document.getElementById(\'collection-manage-search-results\').style.display=\'none\'" style="background: none; border: none; color: #64748b; cursor: pointer; font-size: 18px; padding: 0;">&times;</button></div>';
+                
+                data.results.forEach(websiteResult => {
+                    if (websiteResult.success && websiteResult.results && websiteResult.results.length > 0) {
+                        hasResults = true;
+                        const websiteName = websiteResult.website;
+                        collectionSearchState.websitePages[websiteName] = {
+                            page: websiteResult.page || 1,
+                            hasMore: websiteResult.hasMore || false
+                        };
+                        
+                        resultsHTML += `
+                            <div style="margin-bottom: 12px;" id="website-results-${websiteName.replace(/[^a-zA-Z0-9]/g, '_')}">
+                                <h5 style="color: #1a202c; font-size: 11px; font-weight: 600; margin-bottom: 8px; text-transform: uppercase;">${websiteName}</h5>
+                                <div style="display: flex; gap: 8px; overflow-x: auto; padding: 4px 0; align-items: center;" id="website-movies-${websiteName.replace(/[^a-zA-Z0-9]/g, '_')}">
+                        `;
+                        
+                        websiteResult.results.forEach((movie) => {
+                            resultsHTML += renderMovieCard(movie, collectionKey, websiteName);
+                        });
+                        
+                        if (websiteResult.hasMore) {
+                            resultsHTML += `
+                                <div style="flex: 0 0 auto; display: flex; align-items: center;">
+                                    <button onclick="loadMoreMoviesForWebsite('${collectionKey}', '${websiteName}')" 
+                                        id="load-more-btn-${websiteName.replace(/[^a-zA-Z0-9]/g, '_')}"
+                                        style="background: #6366f1; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 500; white-space: nowrap; height: 36px;">
+                                        Next &rarr;
+                                    </button>
+                                </div>
+                            `;
+                        }
+                        
+                        resultsHTML += `
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+                
+                if (!hasResults) {
+                    resultsDiv.innerHTML = '<div style="text-align: center; padding: 15px; color: #94a3b8;">No movies found. Try a different search term.</div>';
+                    return;
+                }
+                
+                resultsDiv.innerHTML = resultsHTML;
+                updateSelectedMoviesBar(collectionKey);
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div style="text-align: center; padding: 15px; color: #ef4444;">Error: ${error.message}</div>`;
+            }
+        }
+
+        function renderMovieCard(movie, collectionKey, websiteName) {
+            const movieData = {
+                title: movie.title,
+                link: movie.link,
+                image: movie.image || '',
+                language: movie.language || '',
+                genre: movie.genre || '',
+                website: websiteName || ''
+            };
+            const movieDataStr = JSON.stringify(movieData).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+            const checkboxId = `movie-select-${globalMovieIndex}`;
+            const isSelected = selectedMoviesForCollection.some(m => m.link === movie.link);
+            globalMovieIndex++;
+            
+            return `
+                <div style="flex: 0 0 auto; width: 80px; display: flex; flex-direction: column; gap: 4px; position: relative;">
+                    <div style="position: relative; width: 80px; height: 120px; background: #f8f9fa; border-radius: 6px; overflow: hidden; cursor: pointer;" onclick="toggleMovieSelection('${collectionKey}', ${movieDataStr}, '${checkboxId}')">
+                        <img 
+                            src="${movie.image || ''}" 
+                            alt="${movie.title}"
+                            style="width: 100%; height: 100%; object-fit: cover; display: block;"
+                            onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22300%22%3E%3Crect fill=%22%23e2e8f0%22 width=%22200%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%2394a3b8%22 font-family=%22sans-serif%22 font-size=%2210%22%3ENo Image%3C/text%3E%3C/svg%3E'"
+                        >
+                        <div id="${checkboxId}" style="position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; background: ${isSelected ? '#6366f1' : 'rgba(255,255,255,0.9)'}; border: 2px solid ${isSelected ? '#6366f1' : '#cbd5e1'}; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;">
+                            ${isSelected ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20,6 9,17 4,12"></polyline></svg>' : ''}
+                        </div>
+                    </div>
+                    <div style="font-size: 9px; color: #1a202c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500;">${movie.title}</div>
+                </div>
+            `;
+        }
+
+        async function loadMoreMoviesForWebsite(collectionKey, websiteName) {
+            const state = collectionSearchState.websitePages[websiteName];
+            if (!state || !state.hasMore) return;
+            
+            const nextPage = state.page + 1;
+            const loadMoreBtn = document.getElementById(`load-more-btn-${websiteName.replace(/[^a-zA-Z0-9]/g, '_')}`);
+            const originalText = loadMoreBtn.innerHTML;
+            loadMoreBtn.innerHTML = 'Loading...';
+            loadMoreBtn.disabled = true;
+            
+            try {
+                const response = await fetch(`search-single.php?query=${encodeURIComponent(collectionSearchState.query)}&website=${encodeURIComponent(websiteName)}&page=${nextPage}`);
+                const data = await response.json();
+                
+                if (!data.success || !data.results || data.results.length === 0) {
+                    loadMoreBtn.style.display = 'none';
+                    state.hasMore = false;
+                    return;
+                }
+                
+                state.page = nextPage;
+                state.hasMore = data.hasMore || false;
+                
+                const moviesContainer = document.getElementById(`website-movies-${websiteName.replace(/[^a-zA-Z0-9]/g, '_')}`);
+                
+                let newMoviesHTML = '';
+                data.results.forEach((movie) => {
+                    newMoviesHTML += renderMovieCard(movie, collectionKey, websiteName);
+                });
+                
+                loadMoreBtn.parentElement.remove();
+                
+                moviesContainer.insertAdjacentHTML('beforeend', newMoviesHTML);
+                
+                if (data.hasMore) {
+                    const nextBtnHTML = `
+                        <div style="flex: 0 0 auto; display: flex; align-items: center;">
+                            <button onclick="loadMoreMoviesForWebsite('${collectionKey}', '${websiteName}')" 
+                                id="load-more-btn-${websiteName.replace(/[^a-zA-Z0-9]/g, '_')}"
+                                style="background: #6366f1; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 500; white-space: nowrap; height: 36px;">
+                                Next &rarr;
+                            </button>
+                        </div>
+                    `;
+                    moviesContainer.insertAdjacentHTML('beforeend', nextBtnHTML);
+                }
+                
+                updateSelectedMoviesBar(collectionKey);
+                
+            } catch (error) {
+                loadMoreBtn.innerHTML = originalText;
+                loadMoreBtn.disabled = false;
+                showAlert('Error loading more movies: ' + error.message, 'error');
+            }
+        }
+
+        function toggleMovieSelection(collectionKey, movie, checkboxId) {
+            const existingIndex = selectedMoviesForCollection.findIndex(m => m.link === movie.link);
+            const checkbox = document.getElementById(checkboxId);
+            
+            if (existingIndex > -1) {
+                selectedMoviesForCollection.splice(existingIndex, 1);
+                checkbox.style.background = 'rgba(255,255,255,0.9)';
+                checkbox.style.borderColor = '#cbd5e1';
+                checkbox.innerHTML = '';
+            } else {
+                selectedMoviesForCollection.push(movie);
+                checkbox.style.background = '#6366f1';
+                checkbox.style.borderColor = '#6366f1';
+                checkbox.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20,6 9,17 4,12"></polyline></svg>';
+            }
+            
+            updateSelectedMoviesBar(collectionKey);
+        }
+
+        function updateSelectedMoviesBar(collectionKey) {
+            const bar = document.getElementById('collection-selected-bar');
+            const countSpan = document.getElementById('collection-selected-count');
+            const count = selectedMoviesForCollection.length;
+            
+            if (count > 0) {
+                bar.style.display = 'flex';
+                countSpan.textContent = count + ' selected';
+            } else {
+                bar.style.display = 'none';
+            }
+        }
+
+        function clearSelectedMovies(collectionKey) {
+            selectedMoviesForCollection = [];
+            updateSelectedMoviesBar(collectionKey);
+            const checkboxes = document.querySelectorAll('[id^="movie-select-"]');
+            checkboxes.forEach(cb => {
+                cb.style.background = 'rgba(255,255,255,0.9)';
+                cb.style.borderColor = '#cbd5e1';
+                cb.innerHTML = '';
+            });
+        }
+
+        async function addSelectedMoviesToCollection(collectionKey) {
+            if (selectedMoviesForCollection.length === 0) {
+                showAlert('Please select at least one movie', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('config-api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'add_movies_to_collection',
+                        collection_key: collectionKey,
+                        movies: selectedMoviesForCollection
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(result.message || 'Movies added successfully!', 'success');
+                    selectedMoviesForCollection = [];
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    showAlert(result.message || 'Error adding movies', 'error');
+                }
+            } catch (error) {
+                showAlert('Error adding movies: ' + error.message, 'error');
+            }
+        }
+
+        async function addMovieToCollectionFromModal(collectionKey, movie) {
+            try {
+                const response = await fetch('config-api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'add_movie_to_collection',
+                        collection_key: collectionKey,
+                        movie: movie
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Movie added to collection!', 'success');
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    showAlert(result.message || 'Error adding movie', 'error');
+                }
+            } catch (error) {
+                showAlert('Error adding movie: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteMovieFromCollectionInModal(collectionKey, movieIndex) {
+            if (!confirm('Are you sure you want to remove this movie from the collection?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('config-api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'delete_movie_from_collection',
+                        collection_key: collectionKey,
+                        movie_index: movieIndex
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Movie removed from collection!', 'success');
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    showAlert(result.message || 'Error removing movie', 'error');
+                }
+            } catch (error) {
+                showAlert('Error removing movie: ' + error.message, 'error');
+            }
+        }
+
+        async function toggleCollectionVisibilityFromModal(collectionKey) {
+            try {
+                const response = await fetch('config-api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'toggle_collection_visibility',
+                        collection_key: collectionKey
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Collection visibility toggled!', 'success');
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    showAlert(result.message || 'Error toggling visibility', 'error');
+                }
+            } catch (error) {
+                showAlert('Error toggling visibility: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteCollectionFromModal(collectionKey) {
+            if (!confirm('Are you sure you want to delete this collection? All movies in this collection will be removed.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('config-api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'delete_collection',
+                        collection_key: collectionKey
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Collection deleted successfully!', 'success');
+                    closeCollectionManageModal();
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    showAlert(result.message || 'Error deleting collection', 'error');
+                }
+            } catch (error) {
+                showAlert('Error deleting collection: ' + error.message, 'error');
+            }
+        }
+
+        function scrollCollectionCarousel(direction) {
+            const carousel = document.getElementById('collection-carousel');
+            if (carousel) {
+                const scrollAmount = 200;
+                if (direction === 'left') {
+                    carousel.scrollLeft -= scrollAmount;
+                } else {
+                    carousel.scrollLeft += scrollAmount;
+                }
+            }
+        }
+
+        async function moveCollection(collectionKey, direction) {
+            try {
+                const response = await fetch('config-api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'move_collection',
+                        collection_key: collectionKey,
+                        direction: direction
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Collection moved!', 'success');
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    showAlert(result.message || 'Error moving collection', 'error');
+                }
+            } catch (error) {
+                showAlert('Error moving collection: ' + error.message, 'error');
+            }
+        }
+
+        async function moveMovieInCollection(collectionKey, movieIndex, direction) {
+            try {
+                const response = await fetch('config-api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'move_collection_movie',
+                        collection_key: collectionKey,
+                        movie_index: movieIndex,
+                        direction: direction
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Movie moved!', 'success');
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    showAlert(result.message || 'Error moving movie', 'error');
+                }
+            } catch (error) {
+                showAlert('Error moving movie: ' + error.message, 'error');
+            }
+        }
+
+        function openEditCollectionModal(collectionKey, displayName, coverImage) {
+            const modalHtml = `
+                <div id="collection-modal" class="modal active" style="display: flex;">
+                    <div class="modal-content" style="max-width: 500px;">
+                        <div class="modal-header">
+                            <h2 class="modal-title">Edit Collection</h2>
+                            <button class="close-btn" onclick="closeCollectionModal()">&times;</button>
+                        </div>
+                        <form onsubmit="editCollection(event, '${collectionKey}')">
+                            <div class="form-group">
+                                <label class="form-label">Display Name:</label>
+                                <input type="text" id="edit-collection-display-name" class="form-input" value="${displayName}" required placeholder="Enter display name">
+                            </div>
+                            <button type="submit" class="add-btn" style="width: 100%; padding: 14px; font-size: 15px;">Save Changes</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        function closeCollectionModal() {
+            const modal = document.getElementById('collection-modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        async function createCollection(event) {
+            event.preventDefault();
+            const collectionName = document.getElementById('collection-name').value.trim();
+            
+            if (!collectionName) {
+                showAlert('Collection name is required', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('config-api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'create_collection',
+                        collection_name: collectionName,
+                        display_name: collectionName
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Collection created successfully!', 'success');
+                    closeCollectionModal();
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showAlert(result.message || 'Error creating collection', 'error');
+                }
+            } catch (error) {
+                showAlert('Error creating collection: ' + error.message, 'error');
+            }
+        }
+
+        async function editCollection(event, collectionKey) {
+            event.preventDefault();
+            const displayName = document.getElementById('edit-collection-display-name').value.trim();
+            
+            if (!displayName) {
+                showAlert('Display name is required', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('config-api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'edit_collection',
+                        collection_key: collectionKey,
+                        display_name: displayName
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Collection updated successfully!', 'success');
+                    closeCollectionModal();
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showAlert(result.message || 'Error updating collection', 'error');
+                }
+            } catch (error) {
+                showAlert('Error updating collection: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteCollection(collectionKey) {
+            if (!confirm('Are you sure you want to delete this collection? All movies in this collection will be removed.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('config-api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'delete_collection',
+                        collection_key: collectionKey
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Collection deleted successfully!', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showAlert(result.message || 'Error deleting collection', 'error');
+                }
+            } catch (error) {
+                showAlert('Error deleting collection: ' + error.message, 'error');
+            }
+        }
+
+        async function toggleCollectionVisibility(collectionKey) {
+            try {
+                const response = await fetch('config-api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'toggle_collection_visibility',
+                        collection_key: collectionKey
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Collection visibility toggled!', 'success');
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    showAlert(result.message || 'Error toggling visibility', 'error');
+                }
+            } catch (error) {
+                showAlert('Error toggling visibility: ' + error.message, 'error');
+            }
+        }
+
+        async function moveCollection(collectionKey, direction) {
+            try {
+                const response = await fetch('config-api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'move_collection',
+                        collection_key: collectionKey,
+                        direction: direction
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Collection moved!', 'success');
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    showAlert(result.message || 'Error moving collection', 'error');
+                }
+            } catch (error) {
+                showAlert('Error moving collection: ' + error.message, 'error');
+            }
+        }
+
+        let inlineSearchState = {};
+
+        async function searchMoviesForCollection(collectionKey) {
+            const searchInput = document.getElementById(`collection-search-${collectionKey}`);
+            const query = searchInput.value.trim();
+            
+            if (!query) {
+                showAlert('Please enter a search query', 'error');
+                return;
+            }
+            
+            inlineSearchState[collectionKey] = {
+                query: query,
+                websitePages: {}
+            };
+            
+            const resultsDiv = document.getElementById(`collection-search-results-${collectionKey}`);
+            resultsDiv.innerHTML = '<div style="text-align: center; padding: 15px; color: #64748b;">Searching...</div>';
+            resultsDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch(`search.php?query=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                if (!data.success || !data.results || data.results.length === 0) {
+                    resultsDiv.innerHTML = '<div style="text-align: center; padding: 15px; color: #94a3b8;">No movies found. Try a different search term.</div>';
+                    return;
+                }
+                
+                let hasResults = false;
+                let resultsHTML = '<div style="display: flex; justify-content: flex-end; margin-bottom: 10px;"><button onclick="closeCollectionSearchResults(\'' + collectionKey + '\')" style="background: none; border: none; color: #64748b; cursor: pointer; font-size: 18px;">&times;</button></div>';
+                
+                data.results.forEach(websiteResult => {
+                    if (websiteResult.success && websiteResult.results && websiteResult.results.length > 0) {
+                        hasResults = true;
+                        const websiteName = websiteResult.website;
+                        inlineSearchState[collectionKey].websitePages[websiteName] = {
+                            page: websiteResult.page || 1,
+                            hasMore: websiteResult.hasMore || false
+                        };
+                        
+                        const safeWebsiteId = websiteName.replace(/[^a-zA-Z0-9]/g, '_');
+                        
+                        resultsHTML += `
+                            <div style="margin-bottom: 16px;">
+                                <h5 style="color: #1a202c; font-size: 12px; font-weight: 600; margin-bottom: 10px;">${websiteName}</h5>
+                                <div style="display: flex; gap: 10px; overflow-x: auto; padding: 4px 0; align-items: center;" id="inline-movies-${collectionKey}-${safeWebsiteId}">
+                        `;
+                        
+                        websiteResult.results.forEach((movie) => {
+                            resultsHTML += renderInlineMovieCard(movie, collectionKey, websiteName);
+                        });
+                        
+                        if (websiteResult.hasMore) {
+                            resultsHTML += `
+                                <div style="flex: 0 0 auto; display: flex; align-items: center;">
+                                    <button onclick="loadMoreInlineMovies('${collectionKey}', '${websiteName}')" 
+                                        id="inline-load-more-${collectionKey}-${safeWebsiteId}"
+                                        style="background: #6366f1; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 500; white-space: nowrap; height: 36px;">
+                                        Next &rarr;
+                                    </button>
+                                </div>
+                            `;
+                        }
+                        
+                        resultsHTML += `
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+                
+                if (!hasResults) {
+                    resultsDiv.innerHTML = '<div style="text-align: center; padding: 15px; color: #94a3b8;">No movies found. Try a different search term.</div>';
+                    return;
+                }
+                
+                resultsDiv.innerHTML = resultsHTML;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div style="text-align: center; padding: 15px; color: #ef4444;">Error: ${error.message}</div>`;
+            }
+        }
+
+        function renderInlineMovieCard(movie, collectionKey, websiteName) {
+            const movieData = {
+                title: movie.title,
+                link: movie.link,
+                image: movie.image || '',
+                language: movie.language || '',
+                genre: movie.genre || '',
+                website: websiteName || ''
+            };
+            const movieJson = JSON.stringify(movieData).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+            
+            return `
+                <div style="flex: 0 0 auto; width: 90px; display: flex; flex-direction: column; gap: 4px;">
+                    <div style="position: relative; width: 90px; background: #f8f9fa; border-radius: 4px; overflow: hidden;">
+                        <img 
+                            src="${movie.image || ''}" 
+                            alt="${movie.title}"
+                            style="width: 90px; height: 135px; object-fit: cover; display: block;"
+                            onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22300%22%3E%3Crect fill=%22%23e2e8f0%22 width=%22200%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%2394a3b8%22 font-family=%22sans-serif%22 font-size=%2214%22%3ENo Image%3C/text%3E%3C/svg%3E'"
+                        >
+                    </div>
+                    <div style="font-size: 10px; color: #1a202c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500;">${movie.title}</div>
+                    <button 
+                        onclick='addMovieToCollection("${collectionKey}", ${movieJson})'
+                        style="width: 100%; padding: 4px 8px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 9px; font-weight: 500;"
+                    >
+                        Add
+                    </button>
+                </div>
+            `;
+        }
+
+        async function loadMoreInlineMovies(collectionKey, websiteName) {
+            const state = inlineSearchState[collectionKey]?.websitePages[websiteName];
+            if (!state || !state.hasMore) return;
+            
+            const nextPage = state.page + 1;
+            const safeWebsiteId = websiteName.replace(/[^a-zA-Z0-9]/g, '_');
+            const loadMoreBtn = document.getElementById(`inline-load-more-${collectionKey}-${safeWebsiteId}`);
+            const originalText = loadMoreBtn.innerHTML;
+            loadMoreBtn.innerHTML = 'Loading...';
+            loadMoreBtn.disabled = true;
+            
+            try {
+                const response = await fetch(`search-single.php?query=${encodeURIComponent(inlineSearchState[collectionKey].query)}&website=${encodeURIComponent(websiteName)}&page=${nextPage}`);
+                const data = await response.json();
+                
+                if (!data.success || !data.results || data.results.length === 0) {
+                    loadMoreBtn.style.display = 'none';
+                    state.hasMore = false;
+                    return;
+                }
+                
+                state.page = nextPage;
+                state.hasMore = data.hasMore || false;
+                
+                const moviesContainer = document.getElementById(`inline-movies-${collectionKey}-${safeWebsiteId}`);
+                
+                let newMoviesHTML = '';
+                data.results.forEach((movie) => {
+                    newMoviesHTML += renderInlineMovieCard(movie, collectionKey, websiteName);
+                });
+                
+                loadMoreBtn.parentElement.remove();
+                
+                moviesContainer.insertAdjacentHTML('beforeend', newMoviesHTML);
+                
+                if (data.hasMore) {
+                    const nextBtnHTML = `
+                        <div style="flex: 0 0 auto; display: flex; align-items: center;">
+                            <button onclick="loadMoreInlineMovies('${collectionKey}', '${websiteName}')" 
+                                id="inline-load-more-${collectionKey}-${safeWebsiteId}"
+                                style="background: #6366f1; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 500; white-space: nowrap; height: 36px;">
+                                Next &rarr;
+                            </button>
+                        </div>
+                    `;
+                    moviesContainer.insertAdjacentHTML('beforeend', nextBtnHTML);
+                }
+                
+            } catch (error) {
+                loadMoreBtn.innerHTML = originalText;
+                loadMoreBtn.disabled = false;
+                showAlert('Error loading more movies: ' + error.message, 'error');
+            }
+        }
+
+        function closeCollectionSearchResults(collectionKey) {
+            const resultsDiv = document.getElementById(`collection-search-results-${collectionKey}`);
+            resultsDiv.style.display = 'none';
+            document.getElementById(`collection-search-${collectionKey}`).value = '';
+        }
+
+        async function addMovieToCollection(collectionKey, movie) {
+            try {
+                const response = await fetch('config-api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'add_movie_to_collection',
+                        collection_key: collectionKey,
+                        movie: movie
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Movie added to collection!', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showAlert(result.message || 'Error adding movie', 'error');
+                }
+            } catch (error) {
+                showAlert('Error adding movie: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteMovieFromCollection(collectionKey, movieIndex) {
+            if (!confirm('Are you sure you want to remove this movie from the collection?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('config-api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'delete_movie_from_collection',
+                        collection_key: collectionKey,
+                        movie_index: movieIndex
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Movie removed from collection!', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showAlert(result.message || 'Error removing movie', 'error');
+                }
+            } catch (error) {
+                showAlert('Error removing movie: ' + error.message, 'error');
+            }
+        }
+
+        async function moveCollectionMovie(collectionKey, movieIndex, direction) {
+            try {
+                const response = await fetch('config-api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'move_collection_movie',
+                        collection_key: collectionKey,
+                        movie_index: movieIndex,
+                        direction: direction
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Movie moved!', 'success');
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    showAlert(result.message || 'Error moving movie', 'error');
+                }
+            } catch (error) {
+                showAlert('Error moving movie: ' + error.message, 'error');
             }
         }
 
